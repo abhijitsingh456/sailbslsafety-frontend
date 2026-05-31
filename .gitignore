@@ -1,0 +1,63 @@
+# ─── Dependencies ───
+node_modules/
+.pnp/
+.pnp.js
+.yarn/install-state.gz
+
+# ─── Build output ───
+dist/
+dist-ssr/
+*.local
+
+# ─── Environment ───
+.env
+.env.local
+.env.*.local
+# keep .env.example tracked
+
+# ─── Logs ───
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ─── Editor / IDE ───
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# ─── OS noise ───
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# ─── Vercel ───
+.vercel/
+
+# ─── Vite cache ───
+.vite/
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
+
+# ─── Test / coverage ───
+coverage/
+*.lcov
+.nyc_output/
+
+# ─── Misc ───
+*.tgz
+.eslintcache
+.cache/
