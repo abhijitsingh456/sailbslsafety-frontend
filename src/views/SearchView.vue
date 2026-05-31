@@ -1,0 +1,521 @@
+<template>
+  <div class="page">
+    <div class="page-head">
+      <div>
+        <h1 class="page-title">Inspection Observations</h1>
+        <p class="page-sub">Search, filter, and manage all recorded observations.</p>
+      </div>
+      <RouterLink to="/create" class="btn-primary">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+        </svg>
+        New Observation
+      </RouterLink>
+    </div>
+
+    <!-- Filters -->
+    <div class="glass-card filters-card">
+      <button class="filters-toggle" @click="filtersOpen = !filtersOpen" type="button">
+        <div class="toggle-left">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M3 6h18M7 12h10M11 18h2" stroke="currentColor"
+              stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          <span>Filters</span>
+          <span v-if="activeFilterCount" class="filter-badge">{{ activeFilterCount }}</span>
+        </div>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+          :style="{ transform: filtersOpen ? 'rotate(180deg)' : '', transition: 'transform 180ms' }">
+          <path d="M6 9l6 6 6-6" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+
+      <Transition name="slide-down">
+        <div v-if="filtersOpen" class="filters-body">
+          <div class="filters-grid">
+
+            <div class="filter-field">
+              <label class="field-label">Department</label>
+              <MultiSelect v-model="filters.department" :options="DEPARTMENTS"
+                placeholder="All departments" />
+            </div>
+
+            <div class="filter-field">
+              <label class="field-label">Category</label>
+              <MultiSelect v-model="filters.category" :options="CATEGORIES"
+                placeholder="All categories" />
+            </div>
+
+            <div class="filter-field">
+              <label class="field-label">Compliance Status</label>
+              <MultiSelect v-model="filters.complianceStatus" :options="COMPLIANCE_STATUSES"
+                placeholder="All statuses" />
+            </div>
+
+            <div class="filter-field">
+              <label class="field-label">Inspection Date From</label>
+              <input type="date" class="field-input" v-model="filters.inspectionStartDate" />
+            </div>
+
+            <div class="filter-field">
+              <label class="field-label">Inspection Date To</label>
+              <input type="date" class="field-input" v-model="filters.inspectionEndDate" />
+            </div>
+
+            <div class="filter-field">
+              <label class="field-label">Target Date From</label>
+              <input type="date" class="field-input" v-model="filters.targetStartDate" />
+            </div>
+
+            <div class="filter-field">
+              <label class="field-label">Target Date To</label>
+              <input type="date" class="field-input" v-model="filters.targetEndDate" />
+            </div>
+
+            <div class="filter-field">
+              <label class="field-label">Updated On</label>
+              <input type="date" class="field-input" v-model="filters.updatedOn" />
+            </div>
+
+          </div>
+
+          <div class="filter-actions">
+            <button type="button" class="btn-ghost btn-sm" @click="clearFilters">Clear All</button>
+            <button type="button" class="btn-primary btn-sm" @click="doSearch">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/>
+                <path d="M16.5 16.5L21 21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              Search
+            </button>
+          </div>
+        </div>
+      </Transition>
+    </div>
+
+    <!-- Export reports row -->
+    <div class="export-row">
+      <span class="export-label">Export</span>
+      <div class="export-buttons">
+        <button type="button" class="export-btn export-btn--word"
+          :disabled="!!reportLoading" @click="onDownload('word', 'docx')"
+          title="Download Word report">
+          <svg v-if="reportLoading === 'word'" class="spin" width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2.5" stroke-dasharray="40" stroke-dashoffset="30"/>
+          </svg>
+          <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z"
+              stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+            <path d="M14 2v6h6" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+            <path d="M8 13l1.5 5L11 14l1.5 4L14 13" stroke="currentColor"
+              stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span>Word</span>
+        </button>
+
+        <button type="button" class="export-btn export-btn--ppt"
+          :disabled="!!reportLoading" @click="onDownload('powerpoint', 'pptx')"
+          title="Download PowerPoint report">
+          <svg v-if="reportLoading === 'powerpoint'" class="spin" width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2.5" stroke-dasharray="40" stroke-dashoffset="30"/>
+          </svg>
+          <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <rect x="3" y="4" width="18" height="13" rx="1.5" stroke="currentColor" stroke-width="1.8"/>
+            <path d="M3 8h18" stroke="currentColor" stroke-width="1.6"/>
+            <path d="M10 21h4M12 17v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+            <path d="M8 13l3-2 2 1.5L17 9" stroke="currentColor" stroke-width="1.6"
+              stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span>PowerPoint</span>
+        </button>
+
+        <button type="button" class="export-btn export-btn--excel"
+          :disabled="!!reportLoading" @click="onDownload('excel', 'xlsx')"
+          title="Download Excel report">
+          <svg v-if="reportLoading === 'excel'" class="spin" width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2.5" stroke-dasharray="40" stroke-dashoffset="30"/>
+          </svg>
+          <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <rect x="3" y="4" width="18" height="16" rx="1.5" stroke="currentColor" stroke-width="1.8"/>
+            <path d="M3 9h18M3 14h18M9 4v16M15 4v16" stroke="currentColor" stroke-width="1.5"/>
+          </svg>
+          <span>Excel</span>
+        </button>
+      </div>
+      <span v-if="reportError" class="export-error">{{ reportError }}</span>
+    </div>
+
+    <!-- Loading (initial) -->
+    <div v-if="loading && !results.length" class="state-block">
+      <div class="spinner" />
+      <span>Loading observations…</span>
+    </div>
+
+    <!-- Empty -->
+    <div v-else-if="!loading && hasSearched && !results.length" class="state-block">
+      <svg width="44" height="44" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <circle cx="11" cy="11" r="8" stroke="var(--text-3)" stroke-width="1.4"/>
+        <path d="M16.5 16.5L21 21" stroke="var(--text-3)" stroke-width="1.4" stroke-linecap="round"/>
+      </svg>
+      <p class="state-title">No observations found</p>
+      <p class="state-sub">Try adjusting the filters.</p>
+    </div>
+
+    <!-- Prompt -->
+    <div v-else-if="!hasSearched && !loading" class="state-block">
+      <svg width="44" height="44" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M3 6h18M3 12h18M3 18h18" stroke="var(--text-3)"
+          stroke-width="1.4" stroke-linecap="round"/>
+      </svg>
+      <p class="state-title">Use filters above to search</p>
+      <p class="state-sub">Or load all observations at once.</p>
+      <button type="button" class="btn-primary btn-sm" style="margin-top:12px" @click="doSearch">
+        Load All Observations
+      </button>
+    </div>
+
+    <!-- Results -->
+    <template v-else>
+      <div class="results-header">
+        <span class="results-count">
+          Showing <strong>{{ results.length }}</strong>
+          {{ totalElements > results.length ? ` of ${totalElements}` : '' }}
+          observation(s)
+        </span>
+        <div v-if="loading" class="inline-spinner" />
+      </div>
+
+      <div class="results-scroll">
+        <div class="results-list">
+          <ObservationCard
+            v-for="obs in results"
+            :key="obs.observationId ?? obs.id"
+            :obs="obs"
+            @view="openModal"
+          />
+        </div>
+      </div>
+
+      <div v-if="results.length < totalElements" class="load-more-wrap">
+        <button type="button" class="btn-ghost load-more-btn" :disabled="loading" @click="loadMore">
+          <svg v-if="loading" class="spin" width="13" height="13" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="9" stroke="currentColor"
+              stroke-width="2.5" stroke-dasharray="40" stroke-dashoffset="30"/>
+          </svg>
+          {{ loading ? 'Loading…' : `Load More (${totalElements - results.length} remaining)` }}
+        </button>
+      </div>
+    </template>
+  </div>
+
+  <ObservationModal :open="modal.open" :obs="modal.obs"
+    @close="modal.open = false" @saved="onSaved" @deleted="onDeleted" />
+
+</template>
+
+<script setup>
+import { ref, reactive, computed } from 'vue'
+import ObservationCard from '../components/ObservationCard.vue'
+import ObservationModal from '../components/ObservationModal.vue'
+import MultiSelect from './MultiSelect.vue'
+import { searchInspections, downloadReport } from '../services/api.js'
+import { CATEGORIES, DEPARTMENTS, COMPLIANCE_STATUSES } from '../constants/options.js'
+
+const PAGE_SIZE = 25
+
+const filtersOpen = ref(true)
+const hasSearched = ref(false)
+const loading     = ref(false)
+
+const filters = reactive({
+  department: [], category: [], complianceStatus: [],
+  inspectionStartDate: '', inspectionEndDate: '',
+  targetStartDate: '', targetEndDate: '', updatedOn: '',
+})
+
+const activeFilterCount = computed(() => {
+  let n = 0
+  if (filters.department.length)       n++
+  if (filters.category.length)         n++
+  if (filters.complianceStatus.length) n++
+  if (filters.inspectionStartDate || filters.inspectionEndDate) n++
+  if (filters.targetStartDate || filters.targetEndDate)         n++
+  if (filters.updatedOn)               n++
+  return n
+})
+
+function clearFilters() {
+  Object.assign(filters, {
+    department: [], category: [], complianceStatus: [],
+    inspectionStartDate: '', inspectionEndDate: '',
+    targetStartDate: '', targetEndDate: '', updatedOn: '',
+  })
+}
+
+const results       = ref([])
+const page          = ref(0)
+const totalElements = ref(0)
+
+function buildParams(p = 0) {
+  const params = { page: p, size: PAGE_SIZE }
+  if (filters.department.length)       params.department       = filters.department
+  if (filters.category.length)         params.category         = filters.category
+  if (filters.complianceStatus.length) params.complianceStatus = filters.complianceStatus
+  if (filters.inspectionStartDate)     params.inspectionStartDate = filters.inspectionStartDate
+  if (filters.inspectionEndDate)       params.inspectionEndDate   = filters.inspectionEndDate
+  if (filters.targetStartDate)         params.targetStartDate     = filters.targetStartDate
+  if (filters.targetEndDate)           params.targetEndDate       = filters.targetEndDate
+  if (filters.updatedOn)               params.updatedOn           = filters.updatedOn
+  return params
+}
+
+async function doSearch() {
+  loading.value = true; hasSearched.value = true; page.value = 0; results.value = []
+  try {
+    const { data } = await searchInspections(buildParams(0))
+    results.value = data.content ?? []
+    totalElements.value = data.totalElements ?? 0
+  } catch {
+    results.value = []; totalElements.value = 0
+  } finally {
+    loading.value = false
+  }
+}
+
+async function loadMore() {
+  loading.value = true; page.value++
+  try {
+    const { data } = await searchInspections(buildParams(page.value))
+    results.value.push(...(data.content ?? []))
+  } catch {
+    page.value--
+  } finally {
+    loading.value = false
+  }
+}
+
+/* ── Report download ── */
+const reportLoading = ref('')   // '' | 'word' | 'powerpoint' | 'excel'
+const reportError   = ref('')
+
+const REPORT_MIME = {
+  word:       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  powerpoint: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  excel:      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+}
+
+async function onDownload(format, ext) {
+  reportLoading.value = format
+  reportError.value = ''
+  try {
+    const { data } = await downloadReport(format, buildParams(0))
+    const blob = new Blob([data], { type: REPORT_MIME[format] })
+    const url  = URL.createObjectURL(blob)
+    const a    = document.createElement('a')
+    const ts   = new Date().toISOString().slice(0, 10)
+    a.href = url
+    a.download = `bsl-inspection-report-${ts}.${ext}`
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    URL.revokeObjectURL(url)
+  } catch (e) {
+    reportError.value = e?.response?.data?.message ?? 'Report download failed.'
+  } finally {
+    reportLoading.value = ''
+  }
+}
+
+const modal = reactive({ open: false, obs: null })
+function openModal(obs) { modal.obs = obs; modal.open = true }
+function onSaved(updated) {
+  const id = updated.observationId ?? updated.id
+  const idx = results.value.findIndex(r => (r.observationId ?? r.id) === id)
+  if (idx !== -1) results.value[idx] = updated
+  modal.obs = updated
+}
+
+function onDeleted(id) {
+  results.value = results.value.filter(r => (r.observationId ?? r.id) !== id)
+  totalElements.value = Math.max(0, totalElements.value - 1)
+  modal.open = false
+}
+</script>
+
+<style scoped>
+.page-head {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  margin-bottom: 18px; gap: 12px; flex-wrap: wrap;
+}
+
+/* Filters */
+.filters-card { margin-bottom: 18px; }
+
+.filters-toggle {
+  display: flex; align-items: center; justify-content: space-between;
+  width: 100%; padding: 13px 18px; background: transparent;
+  border: none; cursor: pointer; color: var(--text);
+  font-size: 13.5px; font-weight: 600;
+}
+.toggle-left { display: flex; align-items: center; gap: 8px; }
+.filter-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 19px; height: 19px; padding: 0 5px; border-radius: 99px;
+  background: var(--accent); color: #fff; font-size: 10.5px; font-weight: 700;
+}
+
+.filters-body { padding: 0 18px 16px; border-top: 1.5px solid var(--border); }
+
+.filters-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  padding-top: 14px;
+}
+
+.filter-field { display: flex; flex-direction: column; gap: 5px; }
+
+.filter-actions {
+  display: flex; align-items: center; justify-content: flex-end; gap: 8px;
+  margin-top: 14px; padding-top: 12px; border-top: 1.5px solid var(--border);
+}
+.btn-sm { padding: 7px 15px; font-size: 12.5px; }
+
+.slide-down-enter-active, .slide-down-leave-active { transition: opacity 160ms, transform 160ms; }
+.slide-down-enter-from, .slide-down-leave-to { opacity: 0; transform: translateY(-6px); }
+
+/* States */
+.state-block {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 8px; padding: 56px 20px; text-align: center;
+}
+.state-title { margin: 0; font-size: 15px; font-weight: 600; color: var(--text-2); }
+.state-sub   { margin: 0; font-size: 13px; color: var(--text-3); }
+
+.spinner {
+  width: 30px; height: 30px; border-radius: 50%;
+  border: 2.5px solid var(--border); border-top-color: var(--accent);
+  animation: spin 0.7s linear infinite;
+}
+.inline-spinner {
+  width: 15px; height: 15px; border-radius: 50%;
+  border: 2px solid var(--border); border-top-color: var(--accent);
+  animation: spin 0.7s linear infinite;
+}
+
+/* Results */
+.results-header {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
+}
+.results-count { font-size: 13px; color: var(--text-3); }
+.results-count strong { color: var(--text-2); }
+
+/* ── Scrollable results box ── */
+.results-scroll {
+  background: var(--surface);
+  border: 1.5px solid var(--border-strong);
+  border-radius: var(--r);
+  box-shadow: var(--shadow);
+  padding: 12px;
+  max-height: 62vh;
+  overflow-y: auto;
+  position: relative;
+}
+.results-scroll::before {
+  content: '';
+  position: absolute;
+  top: 8px; right: 8px;
+  width: 10px; height: 10px;
+  border-top: 1.5px solid var(--accent);
+  border-right: 1.5px solid var(--accent);
+  pointer-events: none;
+  opacity: 0.55;
+  z-index: 1;
+}
+.results-list { display: flex; flex-direction: column; gap: 9px; }
+
+.load-more-wrap { display: flex; justify-content: center; margin-top: 18px; }
+.load-more-btn { min-width: 240px; justify-content: center; gap: 7px; }
+
+/* ── Export row ── */
+.export-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+.export-label {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.export-label::before {
+  content: '';
+  width: 14px;
+  height: 1.5px;
+  background: var(--accent);
+}
+.export-buttons {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.export-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  border-radius: var(--r-sm);
+  border: 1.5px solid #1a1410;
+  background: var(--surface);
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: pointer;
+  color: var(--text);
+  box-shadow: 2px 2px 0 #1a1410;
+  transition: transform 110ms, box-shadow 110ms, background 140ms, color 140ms;
+}
+.export-btn:hover:not(:disabled) {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 #1a1410;
+  color: #fffdf8;
+}
+.export-btn:active:not(:disabled) {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 #1a1410;
+}
+.export-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.export-btn--word:hover:not(:disabled)  { background: #185abd; }
+.export-btn--ppt:hover:not(:disabled)   { background: #c43e1c; }
+.export-btn--excel:hover:not(:disabled) { background: #107c41; }
+.export-btn--word  svg:not(.spin) { color: #185abd; }
+.export-btn--ppt   svg:not(.spin) { color: #c43e1c; }
+.export-btn--excel svg:not(.spin) { color: #107c41; }
+.export-btn:hover svg { color: #fffdf8; }
+
+.export-error {
+  font-size: 12px;
+  color: var(--red);
+  margin-left: auto;
+  font-weight: 600;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+.spin { animation: spin 0.8s linear infinite; }
+
+@media (max-width: 840px) { .filters-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 620px) { .filters-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 420px) { .filters-grid { grid-template-columns: 1fr; } }
+</style>
