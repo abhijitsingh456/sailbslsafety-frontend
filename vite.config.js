@@ -5,10 +5,6 @@ export default defineConfig({
   plugins: [vue()],
   server: {
     proxy: {
-      '/inspection-observations': {
-        target: 'http://localhost:8080',
-        changeOrigin: true,
-      },
       '/api': {
         target: 'http://localhost:8080',
         changeOrigin: true,

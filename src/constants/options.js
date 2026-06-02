@@ -1,43 +1,50 @@
 export const CATEGORIES = [
-  { value: 'FIRE_SAFETY',        label: 'Fire & Explosion Safety' },
-  { value: 'ELECTRICAL',         label: 'Electrical Safety' },
-  { value: 'MECHANICAL',         label: 'Mechanical Safety' },
-  { value: 'WORKING_AT_HEIGHT',  label: 'Working at Height' },
-  { value: 'CONFINED_SPACE',     label: 'Confined Space' },
-  { value: 'HOUSEKEEPING',       label: 'Housekeeping' },
-  { value: 'PPE',                label: 'Personal Protective Equipment' },
-  { value: 'MATERIAL_HANDLING',  label: 'Material Handling' },
-  { value: 'CHEMICAL_HAZARDS',   label: 'Chemical Hazards' },
-  { value: 'ENVIRONMENTAL',      label: 'Environmental' },
-  { value: 'CONTRACTOR_SAFETY',  label: 'Contractor Safety' },
-  { value: 'TRAFFIC_VEHICLE',    label: 'Traffic & Vehicle Movement' },
+  { value: 'GENERAL INSPECTION',               label: 'General Inspection' },
+  { value: 'SAFETY MONITORING',                label: 'Safety Monitoring' },
+  { value: 'AUDIO VISUAL INSPECTION',          label: 'Audio Visual Inspection' },
+  { value: 'CENTRAL CABLE GALLERY INSPECTION', label: 'Central Cable Gallery Inspection' },
+  { value: 'CONVEYOR GALLERY INSPECTION',      label: 'Conveyor Gallery Inspection' },
+  { value: 'EOT CRANE INSPECTION',             label: 'EOT Crane Inspection' },
+  { value: 'ILLUMINATION INSPECTION',          label: 'Illumination Inspection' },
+  { value: 'NIGHT INSPECTION',                 label: 'Night Inspection' },
+  { value: 'RAIL ROAD CROSSING INSPECTION',    label: 'Rail Road Crossing Inspection' },
+  { value: 'SAFETY WALK',                      label: 'Safety Walk' },
 ]
 
 export const DEPARTMENTS = [
-  { value: 'BF',     label: 'Blast Furnace (BF)' },
-  { value: 'SMS',    label: 'Steel Melting Shop (SMS)' },
-  { value: 'HSM',    label: 'Hot Strip Mill (HSM)' },
-  { value: 'CRM',    label: 'Cold Rolling Mill (CRM)' },
-  { value: 'COB',    label: 'Coke Oven Battery (COB)' },
-  { value: 'SP',     label: 'Sinter Plant (SP)' },
-  { value: 'LDP',    label: 'Lime & Dolomite Plant (LDP)' },
-  { value: 'OP',     label: 'Oxygen Plant (OP)' },
-  { value: 'PBS',    label: 'Power & Blowing Station (PBS)' },
-  { value: 'RMP',    label: 'Refractory Materials Plant (RMP)' },
-  { value: 'CMD',    label: 'Central Maintenance Dept (CMD)' },
-  { value: 'RMH',    label: 'Raw Material Handling (RMH)' },
-  { value: 'BPP',    label: 'By-Products Plant (BPP)' },
-  { value: 'WMD',    label: 'Water Management Dept (WMD)' },
-  { value: 'SAFETY', label: 'Safety Department' },
-  { value: 'HR',     label: 'HR & Administration' },
-  { value: 'CIVIL',  label: 'Civil & Infrastructure' },
+  { value: 'BF',              label: 'BF' },
+  { value: 'CED',             label: 'CED' },
+  { value: 'CME',             label: 'CME' },
+  { value: 'CMM',             label: 'CMM' },
+  { value: 'CO&CC',           label: 'CO&CC' },
+  { value: 'CRM-1&2',         label: 'CRM-1&2' },
+  { value: 'CRM-3',           label: 'CRM-3' },
+  { value: 'DNW',             label: 'DNW' },
+  { value: 'EMD',             label: 'EMD' },
+  { value: 'GU',              label: 'GU' },
+  { value: 'HRCF',            label: 'HRCF' },
+  { value: 'HSM',             label: 'HSM' },
+  { value: 'I&A',             label: 'I&A' },
+  { value: 'MRD',             label: 'MRD' },
+  { value: 'RCL',             label: 'RCL' },
+  { value: 'RED',             label: 'RED' },
+  { value: 'RGBS',            label: 'RGBS' },
+  { value: 'RMHP',            label: 'RMHP' },
+  { value: 'RMP',             label: 'RMP' },
+  { value: 'SHOPS & FOUNDRY', label: 'Shops & Foundry' },
+  { value: 'SMS NEW',         label: 'SMS New' },
+  { value: 'SMS-2 & CCS',     label: 'SMS-2 & CCS' },
+  { value: 'SP',              label: 'SP' },
+  { value: 'TBS',             label: 'TBS' },
+  { value: 'TRAFFIC',         label: 'Traffic' },
+  { value: 'WMD',             label: 'WMD' },
+  { value: 'OTHERS',          label: 'Others' },
 ]
 
 export const COMPLIANCE_STATUSES = [
-  { value: 'Complied',           label: 'Complied' },
-  { value: 'Not Complied',       label: 'Not Complied' },
-  { value: 'Partially Complied', label: 'Partially Complied' },
-  { value: 'In Progress',        label: 'In Progress' },
+  { value: 'COMPLIED',     label: 'Complied' },
+  { value: 'NOT COMPLIED', label: 'Not Complied' },
+  { value: 'GOOD POINT',   label: 'Good Point' },
 ]
 
 export const DISPATCHER_OPTIONS = [
@@ -51,10 +58,9 @@ export function getLabel(options, value) {
 
 export function statusConfig(status) {
   const map = {
-    'Complied':           { label: 'Complied',          color: 'var(--green)', dimBg: 'var(--green-dim)', border: 'var(--green-border)' },
-    'Not Complied':       { label: 'Not Complied',       color: 'var(--red)',   dimBg: 'var(--red-dim)',   border: 'var(--red-border)'   },
-    'Partially Complied': { label: 'Partially Complied', color: 'var(--amber)', dimBg: 'var(--amber-dim)', border: 'var(--amber-border)' },
-    'In Progress':        { label: 'In Progress',        color: 'var(--blue)',  dimBg: 'var(--blue-dim)',  border: 'var(--blue-border)'  },
+    'COMPLIED':     { label: 'Complied',     color: 'var(--green)', dimBg: 'var(--green-dim)', border: 'var(--green-border)' },
+    'NOT COMPLIED': { label: 'Not Complied', color: 'var(--red)',   dimBg: 'var(--red-dim)',   border: 'var(--red-border)'   },
+    'GOOD POINT':   { label: 'Good Point',   color: 'var(--blue)',  dimBg: 'var(--blue-dim)',  border: 'var(--blue-border)'  },
   }
-  return map[status] ?? { label: status, color: 'var(--text-3)', dimBg: 'rgba(120,155,210,0.08)', border: 'rgba(120,155,210,0.2)' }
+  return map[status] ?? { label: status, color: 'var(--text-3)', dimBg: 'rgba(120,120,140,0.08)', border: 'rgba(120,120,140,0.2)' }
 }

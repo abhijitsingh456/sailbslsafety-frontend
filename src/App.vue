@@ -3,13 +3,7 @@
     <header class="navbar">
       <div class="brand">
         <div class="brand-icon" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-            <path d="M12 2L3 7v5c0 5.25 3.75 10.15 9 11.35C17.25 22.15 21 17.25 21 12V7L12 2z"
-              fill="#fffdf8" stroke="#1a1410" stroke-width="1.8"
-              stroke-linejoin="round"/>
-            <path d="M9 12l2 2 4-4" stroke="#c63d10" stroke-width="2.2"
-              stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
+          <img src="/sail-logo.svg" alt="" class="brand-logo" />
         </div>
         <div class="brand-copy">
           <span class="brand-eyebrow">Bokaro Steel Plant · SAIL</span>
@@ -18,13 +12,13 @@
       </div>
 
       <nav class="nav-links" role="navigation">
-        <RouterLink to="/create" class="nav-btn nav-btn--primary">
+        <RouterLink to="/inspection/create" class="nav-btn nav-btn--primary">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
           </svg>
           New Observation
         </RouterLink>
-        <RouterLink to="/search" class="nav-btn">
+        <RouterLink to="/inspection/search" class="nav-btn">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/>
             <path d="M16.5 16.5L21 21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
@@ -45,10 +39,14 @@
       <span class="foot-spacer" />
       <span class="foot-mono foot-vol">VOL · I</span>
     </footer>
+
+    <Toaster />
   </div>
 </template>
 
-<script setup></script>
+<script setup>
+import Toaster from './components/Toaster.vue'
+</script>
 
 <style scoped>
 #shell {
@@ -80,14 +78,17 @@
 }
 
 .brand-icon {
-  width: 38px;
-  height: 38px;
-  border-radius: 0;
-  background: var(--surface-2);
-  border: 1.5px solid #1a1410;
-  box-shadow: 2px 2px 0 #1a1410;
+  width: 42px;
+  height: 42px;
   display: grid;
   place-items: center;
+  flex-shrink: 0;
+}
+.brand-logo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
 }
 
 .brand-copy {

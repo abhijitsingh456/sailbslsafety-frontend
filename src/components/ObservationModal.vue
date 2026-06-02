@@ -93,6 +93,10 @@
                   <span class="view-val">{{ getLabel(DEPARTMENTS, obs.department) }}</span>
                 </div>
                 <div class="view-field">
+                  <span class="view-label">Sub-Department</span>
+                  <span class="view-val">{{ obs.subDepartment || '—' }}</span>
+                </div>
+                <div class="view-field">
                   <span class="view-label">Location</span>
                   <span class="view-val">{{ obs.location || '—' }}</span>
                 </div>
@@ -114,10 +118,6 @@
                 <div class="view-field">
                   <span class="view-label">Dispatcher Report</span>
                   <span class="view-val">{{ obs.toBeIncludedInDispatcher === 'YES' ? 'Yes' : 'No' }}</span>
-                </div>
-                <div class="view-field">
-                  <span class="view-label">Discussed With</span>
-                  <span class="view-val">{{ obs.discussedWith || '—' }}</span>
                 </div>
                 <div class="view-field vf-full">
                   <span class="view-label">Recommendations</span>
@@ -206,18 +206,23 @@
                     </select>
                   </div>
                   <div class="form-field">
+                    <label class="field-label" for="e-subdept">Sub-Department</label>
+                    <input id="e-subdept" type="text" class="field-input"
+                      v-model="form.subDepartment" placeholder="e.g. BF-2 / Bay-A" />
+                  </div>
+                  <div class="form-field">
                     <label class="field-label" for="e-loc">Location</label>
                     <input id="e-loc" type="text" class="field-input"
-                      v-model="form.location" placeholder="e.g. BF-2 Cast House" />
+                      v-model="form.location" placeholder="e.g. Cast House" />
                   </div>
                   <div class="form-field vf-full">
                     <label class="field-label" for="e-obs">Observation</label>
                     <textarea id="e-obs" class="field-input" rows="3"
-                      v-model="form.observation" required />
+                      v-model="form.observation" />
                   </div>
                   <div class="form-field">
                     <label class="field-label" for="e-status">Compliance Status</label>
-                    <select id="e-status" class="field-input" v-model="form.complianceStatus" required>
+                    <select id="e-status" class="field-input" v-model="form.complianceStatus">
                       <option value="">Select status</option>
                       <option v-for="o in COMPLIANCE_STATUSES" :key="o.value" :value="o.value">{{ o.label }}</option>
                     </select>
@@ -228,14 +233,9 @@
                   </div>
                   <div class="form-field">
                     <label class="field-label" for="e-disp">Dispatcher Report</label>
-                    <select id="e-disp" class="field-input" v-model="form.toBeIncludedInDispatcher">
+                    <select id="e-disp" class="field-input" v-model="form.toBeIncludedInDispatcher" required>
                       <option v-for="o in DISPATCHER_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
                     </select>
-                  </div>
-                  <div class="form-field">
-                    <label class="field-label" for="e-disc">Discussed With</label>
-                    <input id="e-disc" type="text" class="field-input"
-                      v-model="form.discussedWith" placeholder="Name / designation" />
                   </div>
                   <div class="form-field vf-full">
                     <label class="field-label" for="e-rec">Recommendations</label>
@@ -314,9 +314,9 @@ const inspUploadRef = ref(null)
 const compUploadRef = ref(null)
 
 const form = reactive({
-  inspectionDate: '', category: '', department: '', location: '',
-  observation: '', complianceStatus: '', targetDate: '',
-  toBeIncludedInDispatcher: 'NO', recommendations: '', discussedWith: '',
+  inspectionDate: '', category: '', department: '', subDepartment: '',
+  location: '', observation: '', complianceStatus: '', targetDate: '',
+  toBeIncludedInDispatcher: 'NO', recommendations: '',
 })
 
 const cfg = computed(() => statusConfig(props.obs?.complianceStatus))
@@ -325,7 +325,9 @@ const inspPhotos = computed(() => props.obs?.observationPhotoUrl ?? [])
 const compPhotos = computed(() => props.obs?.compliedPhotoUrl ?? [])
 
 const isOverdue = computed(() => {
-  if (!props.obs?.targetDate || props.obs.complianceStatus === 'Complied') return false
+  if (!props.obs?.targetDate) return false
+  const s = props.obs.complianceStatus
+  if (s === 'COMPLIED' || s === 'GOOD POINT') return false
   return new Date(props.obs.targetDate) < new Date()
 })
 
@@ -337,13 +339,13 @@ function populateForm(obs) {
     inspectionDate: obs.inspectionDate ?? '',
     category: obs.category ?? '',
     department: obs.department ?? '',
+    subDepartment: obs.subDepartment ?? '',
     location: obs.location ?? '',
     observation: obs.observation ?? '',
     complianceStatus: obs.complianceStatus ?? '',
     targetDate: obs.targetDate ?? '',
     toBeIncludedInDispatcher: obs.toBeIncludedInDispatcher ?? 'NO',
     recommendations: obs.recommendations ?? '',
-    discussedWith: obs.discussedWith ?? '',
   })
 }
 

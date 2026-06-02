@@ -7,23 +7,6 @@
       </div>
     </div>
 
-    <!-- Success banner -->
-    <Transition name="banner">
-      <div v-if="submitted" class="success-banner" role="alert">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <circle cx="12" cy="12" r="9" fill="rgba(5,150,105,0.1)"
-            stroke="var(--green)" stroke-width="1.8"/>
-          <path d="M8 12l3 3 5-5" stroke="var(--green)" stroke-width="2" stroke-linecap="round"/>
-        </svg>
-        Observation submitted successfully!
-        <button class="banner-close" @click="submitted = false" aria-label="Dismiss">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none">
-            <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
-          </svg>
-        </button>
-      </div>
-    </Transition>
-
     <form @submit.prevent="submit" novalidate>
       <div class="glass-card form-card">
 
@@ -53,20 +36,22 @@
           </div>
         </div>
 
-        <!-- Row 2: location · compliance · target date -->
+        <!-- Row 2: other department · location · target date -->
         <div class="grid-3">
+          <div class="field">
+            <label class="field-label" for="subDepartment">
+              Other Department
+              <span v-if="!isOtherDept" class="hint-soft">select Others above</span>
+            </label>
+            <input id="subDepartment" type="text" class="field-input"
+              v-model="form.subDepartment"
+              :disabled="!isOtherDept"
+              :placeholder="isOtherDept ? 'Specify the department' : '—'" />
+          </div>
           <div class="field">
             <label class="field-label" for="location">Location</label>
             <input id="location" type="text" class="field-input"
-              v-model="form.location" placeholder="e.g. BF-2 Cast House" />
-          </div>
-          <div class="field">
-            <label class="field-label" for="status">Compliance Status <span class="req">*</span></label>
-            <select id="status" class="field-input" v-model="form.complianceStatus" required>
-              <option value="">Select status</option>
-              <option v-for="o in COMPLIANCE_STATUSES" :key="o.value" :value="o.value">{{ o.label }}</option>
-            </select>
-            <span v-if="errors.complianceStatus" class="ferr">{{ errors.complianceStatus }}</span>
+              v-model="form.location" placeholder="e.g. Cast House" />
           </div>
           <div class="field">
             <label class="field-label" for="targetDate">Target Date</label>
@@ -77,25 +62,26 @@
 
         <!-- Row 3: observation (full width) -->
         <div class="field">
-          <label class="field-label" for="observation">Observation <span class="req">*</span></label>
+          <label class="field-label" for="observation">Observation</label>
           <textarea id="observation" class="field-input obs-area"
-            v-model="form.observation" required
+            v-model="form.observation"
             placeholder="Describe the unsafe act / condition observed…" />
-          <span v-if="errors.observation" class="ferr">{{ errors.observation }}</span>
         </div>
 
-        <!-- Row 4: dispatcher · discussed with -->
+        <!-- Row 4: compliance · dispatcher -->
         <div class="grid-2">
           <div class="field">
-            <label class="field-label" for="dispatcher">Include in Dispatcher Report</label>
-            <select id="dispatcher" class="field-input" v-model="form.toBeIncludedInDispatcher">
-              <option v-for="o in DISPATCHER_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
+            <label class="field-label" for="status">Compliance Status</label>
+            <select id="status" class="field-input" v-model="form.complianceStatus">
+              <option value="">Select status</option>
+              <option v-for="o in COMPLIANCE_STATUSES" :key="o.value" :value="o.value">{{ o.label }}</option>
             </select>
           </div>
           <div class="field">
-            <label class="field-label" for="discussedWith">Discussed With</label>
-            <input id="discussedWith" type="text" class="field-input"
-              v-model="form.discussedWith" placeholder="Name / designation" />
+            <label class="field-label" for="dispatcher">Include in Dispatcher Report <span class="req">*</span></label>
+            <select id="dispatcher" class="field-input" v-model="form.toBeIncludedInDispatcher" required>
+              <option v-for="o in DISPATCHER_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
+            </select>
           </div>
         </div>
 
@@ -135,21 +121,19 @@
                 <rect x="2" y="6" width="20" height="14" rx="2"
                   stroke="currentColor" stroke-width="1.8"/>
               </svg>
-              Complied Photos <span class="hint-soft">max 3</span>
+              Complied Photos
+              <span v-if="!isComplied" class="hint-soft">status must be Complied</span>
+              <span v-else class="hint-soft">max 3</span>
             </label>
-            <PhotoUpload ref="compUploadRef" :max="3" @update:files="compliedPhotos = $event" />
+            <PhotoUpload ref="compUploadRef" :max="3"
+              :disabled="!isComplied"
+              disabled-hint="Available when status is Complied"
+              @update:files="compliedPhotos = $event" />
           </div>
         </div>
 
         <!-- Actions -->
         <div class="form-actions">
-          <span v-if="submitError" class="submit-error">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/>
-              <path d="M12 8v4M12 16h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            </svg>
-            {{ submitError }}
-          </span>
           <div class="action-btns">
             <button type="button" class="btn-ghost" @click="resetForm">Reset</button>
             <button type="submit" class="btn-primary" :disabled="submitting">
@@ -168,51 +152,72 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, computed, watch } from 'vue'
 import PhotoUpload from '../components/PhotoUpload.vue'
 import { createInspection } from '../services/api.js'
 import { CATEGORIES, DEPARTMENTS, COMPLIANCE_STATUSES, DISPATCHER_OPTIONS } from '../constants/options.js'
+import { useToast } from '../composables/useToasts.js'
 
+const toast = useToast()
 const today = new Date().toISOString().split('T')[0]
 
-const inspUploadRef   = ref(null)
-const compUploadRef   = ref(null)
+const inspUploadRef    = ref(null)
+const compUploadRef    = ref(null)
 const inspectionPhotos = ref([])
 const compliedPhotos   = ref([])
-const submitting  = ref(false)
-const submitted   = ref(false)
-const submitError = ref('')
-const errors      = reactive({})
+const submitting       = ref(false)
+const errors           = reactive({})
 
 const form = reactive({
   inspectionDate: today,
-  category: '', department: '', location: '',
+  category: '', department: '', subDepartment: '', location: '',
   observation: '', complianceStatus: '', targetDate: '',
-  toBeIncludedInDispatcher: 'NO', recommendations: '', discussedWith: '',
+  toBeIncludedInDispatcher: 'NO', recommendations: '',
+})
+
+/* ── Conditional field gating ── */
+const isOtherDept = computed(() => form.department === 'OTHERS')
+const isComplied  = computed(() => form.complianceStatus === 'COMPLIED')
+
+// When user switches *away* from "Others", clear whatever they typed.
+watch(isOtherDept, (now) => {
+  if (!now) form.subDepartment = ''
+})
+
+// When user switches *away* from "COMPLIED", wipe complied photos + previews.
+watch(isComplied, (now) => {
+  if (!now) {
+    compliedPhotos.value = []
+    compUploadRef.value?.reset()
+  }
 })
 
 function validate() {
   const e = {}
-  if (!form.inspectionDate)   e.inspectionDate   = 'Required'
-  if (!form.category)         e.category         = 'Required'
-  if (!form.department)       e.department       = 'Required'
-  if (!form.observation)      e.observation      = 'Required'
-  if (!form.complianceStatus) e.complianceStatus = 'Required'
+  if (!form.inspectionDate)            e.inspectionDate            = 'Required'
+  if (!form.category)                  e.category                  = 'Required'
+  if (!form.department)                e.department                = 'Required'
+  if (!form.toBeIncludedInDispatcher)  e.toBeIncludedInDispatcher  = 'Required'
   Object.assign(errors, e)
   Object.keys(errors).forEach(k => { if (!e[k]) delete errors[k] })
   return Object.keys(e).length === 0
 }
 
 async function submit() {
-  if (!validate()) return
-  submitting.value = true; submitError.value = ''
+  if (!validate()) {
+    toast.error('Please fill in all required fields.')
+    return
+  }
+  submitting.value = true
+  const flashId = toast.loading('Submitting observation…')
   try {
     await createInspection({ ...form }, inspectionPhotos.value, compliedPhotos.value)
-    submitted.value = true
+    toast.resolve(flashId, 'success', 'Observation submitted successfully.')
     resetForm()
     window.scrollTo({ top: 0, behavior: 'smooth' })
   } catch (e) {
-    submitError.value = e?.response?.data?.message ?? 'Submission failed. Please try again.'
+    const msg = e?.response?.data?.message ?? 'Submission failed. Please try again.'
+    toast.resolve(flashId, 'error', msg)
   } finally {
     submitting.value = false
   }
@@ -220,12 +225,11 @@ async function submit() {
 
 function resetForm() {
   Object.assign(form, {
-    inspectionDate: today, category: '', department: '', location: '',
-    observation: '', complianceStatus: '', targetDate: '',
-    toBeIncludedInDispatcher: 'NO', recommendations: '', discussedWith: '',
+    inspectionDate: today, category: '', department: '', subDepartment: '',
+    location: '', observation: '', complianceStatus: '', targetDate: '',
+    toBeIncludedInDispatcher: 'NO', recommendations: '',
   })
   Object.keys(errors).forEach(k => delete errors[k])
-  submitError.value = ''
   inspUploadRef.value?.reset()
   compUploadRef.value?.reset()
 }
@@ -233,21 +237,6 @@ function resetForm() {
 
 <style scoped>
 .page-head { margin-bottom: 16px; }
-
-/* Success banner */
-.success-banner {
-  display: flex; align-items: center; gap: 9px;
-  padding: 11px 14px; border-radius: var(--r-sm);
-  background: var(--green-dim); border: 1.5px solid var(--green-border);
-  color: var(--green); font-size: 13px; font-weight: 500; margin-bottom: 14px;
-}
-.banner-close {
-  margin-left: auto; background: transparent; border: none; color: inherit;
-  cursor: pointer; display: grid; place-items: center; padding: 2px; opacity: 0.75;
-}
-.banner-close:hover { opacity: 1; }
-.banner-enter-active, .banner-leave-active { transition: opacity 180ms, transform 180ms; }
-.banner-enter-from, .banner-leave-to { opacity: 0; transform: translateY(-6px); }
 
 /* Form card */
 .form-card {
@@ -288,10 +277,6 @@ function resetForm() {
   border-top: 1.5px solid var(--border); margin-top: 2px;
 }
 .action-btns { display: flex; align-items: center; gap: 8px; }
-.submit-error {
-  display: flex; align-items: center; gap: 6px;
-  font-size: 12.5px; color: var(--red);
-}
 
 @keyframes spin { to { transform: rotate(360deg); } }
 .spin { animation: spin 0.8s linear infinite; }

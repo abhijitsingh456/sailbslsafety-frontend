@@ -5,7 +5,7 @@
         <h1 class="page-title">Inspection Observations</h1>
         <p class="page-sub">Search, filter, and manage all recorded observations.</p>
       </div>
-      <RouterLink to="/create" class="btn-primary">
+      <RouterLink to="/inspection/create" class="btn-primary">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
         </svg>
@@ -35,6 +35,7 @@
         <div v-if="filtersOpen" class="filters-body">
           <div class="filters-grid">
 
+            <!-- Row 1 -->
             <div class="filter-field">
               <label class="field-label">Department</label>
               <MultiSelect v-model="filters.department" :options="DEPARTMENTS"
@@ -54,6 +55,12 @@
             </div>
 
             <div class="filter-field">
+              <label class="field-label">Updated On</label>
+              <input type="date" class="field-input" v-model="filters.updatedOn" />
+            </div>
+
+            <!-- Row 2 -->
+            <div class="filter-field">
               <label class="field-label">Inspection Date From</label>
               <input type="date" class="field-input" v-model="filters.inspectionStartDate" />
             </div>
@@ -71,11 +78,6 @@
             <div class="filter-field">
               <label class="field-label">Target Date To</label>
               <input type="date" class="field-input" v-model="filters.targetEndDate" />
-            </div>
-
-            <div class="filter-field">
-              <label class="field-label">Updated On</label>
-              <input type="date" class="field-input" v-model="filters.updatedOn" />
             </div>
 
           </div>
@@ -221,6 +223,9 @@ import ObservationModal from '../components/ObservationModal.vue'
 import MultiSelect from './MultiSelect.vue'
 import { searchInspections, downloadReport } from '../services/api.js'
 import { CATEGORIES, DEPARTMENTS, COMPLIANCE_STATUSES } from '../constants/options.js'
+import { useToast } from '../composables/useToasts.js'
+
+const toast = useToast()
 
 const PAGE_SIZE = 25
 
@@ -272,12 +277,29 @@ function buildParams(p = 0) {
 
 async function doSearch() {
   loading.value = true; hasSearched.value = true; page.value = 0; results.value = []
+  const flashId = toast.loading('Searching observations…')
   try {
     const { data } = await searchInspections(buildParams(0))
-    results.value = data.content ?? []
-    totalElements.value = data.totalElements ?? 0
-  } catch {
+    const content = data.content ?? []
+    results.value = content
+    // Prefer backend totalElements, but fall back to the page length so the
+    // toast/UI stay correct even if the backend response omits paging meta.
+    totalElements.value = Number.isFinite(data.totalElements)
+      ? data.totalElements
+      : content.length
+    const n = results.value.length
+    const total = totalElements.value
+    if (n === 0) {
+      toast.resolve(flashId, 'info', 'No matching observations.')
+    } else {
+      const moreNote = total > n ? ` of ${total}` : ''
+      toast.resolve(flashId, 'success',
+        `Found ${n}${moreNote} observation${total === 1 ? '' : 's'}.`)
+    }
+  } catch (e) {
     results.value = []; totalElements.value = 0
+    const msg = e?.response?.data?.message ?? 'Search failed. Please try again.'
+    toast.resolve(flashId, 'error', msg)
   } finally {
     loading.value = false
   }
@@ -285,11 +307,16 @@ async function doSearch() {
 
 async function loadMore() {
   loading.value = true; page.value++
+  const flashId = toast.loading('Loading more…')
   try {
     const { data } = await searchInspections(buildParams(page.value))
-    results.value.push(...(data.content ?? []))
-  } catch {
+    const more = data.content ?? []
+    results.value.push(...more)
+    toast.resolve(flashId, 'success', `Loaded ${more.length} more.`)
+  } catch (e) {
     page.value--
+    const msg = e?.response?.data?.message ?? 'Failed to load more.'
+    toast.resolve(flashId, 'error', msg)
   } finally {
     loading.value = false
   }
@@ -305,9 +332,12 @@ const REPORT_MIME = {
   excel:      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
 }
 
+const REPORT_LABEL = { word: 'Word', powerpoint: 'PowerPoint', excel: 'Excel' }
+
 async function onDownload(format, ext) {
   reportLoading.value = format
   reportError.value = ''
+  const flashId = toast.loading(`Preparing ${REPORT_LABEL[format]} report…`)
   try {
     const { data } = await downloadReport(format, buildParams(0))
     const blob = new Blob([data], { type: REPORT_MIME[format] })
@@ -320,8 +350,11 @@ async function onDownload(format, ext) {
     a.click()
     a.remove()
     URL.revokeObjectURL(url)
+    toast.resolve(flashId, 'success', `${REPORT_LABEL[format]} report downloaded.`)
   } catch (e) {
-    reportError.value = e?.response?.data?.message ?? 'Report download failed.'
+    const msg = e?.response?.data?.message ?? 'Report download failed.'
+    reportError.value = msg
+    toast.resolve(flashId, 'error', msg)
   } finally {
     reportLoading.value = ''
   }
@@ -418,7 +451,7 @@ function onDeleted(id) {
   border-radius: var(--r);
   box-shadow: var(--shadow);
   padding: 12px;
-  max-height: 62vh;
+  max-height: 78vh;
   overflow-y: auto;
   position: relative;
 }

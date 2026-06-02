@@ -1,13 +1,13 @@
 <template>
-  <div class="photo-upload">
+  <div class="photo-upload" :class="{ 'pu--disabled': disabled }">
     <div
       class="drop-zone"
-      :class="{ 'dz--active': dragging, 'dz--full': files.length >= max }"
-      @dragenter.prevent="dragging = true"
+      :class="{ 'dz--active': dragging && !disabled, 'dz--full': files.length >= max, 'dz--disabled': disabled }"
+      @dragenter.prevent="!disabled && (dragging = true)"
       @dragleave.prevent="dragging = false"
       @dragover.prevent
-      @drop.prevent="onDrop"
-      @click="files.length < max && $refs.input.click()"
+      @drop.prevent="!disabled && onDrop($event)"
+      @click="!disabled && files.length < max && $refs.input.click()"
     >
       <input
         ref="input"
@@ -15,10 +15,18 @@
         accept="image/jpeg,image/png,image/webp,image/jpg"
         multiple
         class="hidden-input"
+        :disabled="disabled"
         @change="onFileChange"
       />
 
-      <template v-if="files.length < max">
+      <template v-if="disabled">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true" class="drop-icon">
+          <rect x="5" y="11" width="14" height="9" rx="1.5" stroke="currentColor" stroke-width="1.6"/>
+          <path d="M8 11V7a4 4 0 018 0v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+        </svg>
+        <span class="drop-text">{{ disabledHint || 'Locked' }}</span>
+      </template>
+      <template v-else-if="files.length < max">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"
           class="drop-icon">
           <rect x="3" y="3" width="18" height="18" rx="3"
@@ -51,7 +59,11 @@
 <script setup>
 import { ref } from 'vue'
 
-const props = defineProps({ max: { type: Number, default: 3 } })
+const props = defineProps({
+  max:          { type: Number,  default: 3 },
+  disabled:     { type: Boolean, default: false },
+  disabledHint: { type: String,  default: '' },
+})
 const emit  = defineEmits(['update:files'])
 
 const dragging = ref(false)
@@ -113,6 +125,20 @@ defineExpose({ reset })
   box-shadow: 0 0 0 3px var(--accent-glow);
 }
 .dz--full { cursor: default; opacity: 0.55; }
+.dz--disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  border-style: dashed;
+  border-color: var(--border);
+  background: var(--surface-2);
+  color: var(--text-3);
+}
+.dz--disabled:hover {
+  border-color: var(--border);
+  background: var(--surface-2);
+  color: var(--text-3);
+}
+.pu--disabled .previews { opacity: 0.6; pointer-events: none; }
 
 .drop-icon { flex-shrink: 0; }
 .drop-text { flex: 1; font-weight: 500; }
