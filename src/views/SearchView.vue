@@ -327,23 +327,14 @@ function buildParams(p = 0) {
 }
 
 function parsePage(data) {
-  const content = data.content ?? []
-  // Determine if more pages exist using any signal the backend provides:
-  // data.last === false  (Spring Page)
-  // data.totalPages > currentPage + 1
-  // data.totalElements > loaded so far (after appending)
-  // Fallback: a full page means there might be more
-  let more = false
-  if (typeof data.last === 'boolean') {
-    more = !data.last
-  } else if (Number.isFinite(data.totalPages) && Number.isFinite(data.number)) {
-    more = data.number < data.totalPages - 1
-  } else if (Number.isFinite(data.totalElements)) {
-    more = results.value.length + content.length < data.totalElements
-  } else {
-    more = content.length === PAGE_SIZE
-  }
-  return { content, more }
+  const content    = data.content ?? []
+  // Spring Boot 3 wraps paging metadata under data.page
+  const meta       = data.page ?? {}
+  const totalEl    = meta.totalElements ?? 0
+  const totalPg    = meta.totalPages    ?? 1
+  const currentPg  = meta.number        ?? 0
+  const more       = currentPg < totalPg - 1
+  return { content, more, totalElements: totalEl }
 }
 
 async function doSearch() {
@@ -352,14 +343,13 @@ async function doSearch() {
   const flashId = toast.loading('Searching observations…')
   try {
     const { data } = await searchInspections(buildParams(0))
-    const { content, more } = parsePage(data)
-    results.value    = content
-    hasMore.value    = more
-    totalElements.value = Number.isFinite(data.totalElements) ? data.totalElements : content.length
+    const { content, more, totalElements: total } = parsePage(data)
+    results.value       = content
+    hasMore.value       = more
+    totalElements.value = total
     if (content.length === 0) {
       toast.resolve(flashId, 'info', 'No matching observations.')
     } else {
-      const total    = totalElements.value
       const moreNote = total > content.length ? ` of ${total}` : ''
       toast.resolve(flashId, 'success',
         `Found ${content.length}${moreNote} observation${total === 1 ? '' : 's'}.`)
@@ -379,11 +369,11 @@ async function loadMore() {
   const flashId = toast.loading('Loading more…')
   try {
     const { data } = await searchInspections(buildParams(nextPage))
-    const { content, more } = parsePage(data)
+    const { content, more, totalElements: total } = parsePage(data)
     results.value.push(...content)
-    page.value  = nextPage
-    hasMore.value = more
-    if (Number.isFinite(data.totalElements)) totalElements.value = data.totalElements
+    page.value          = nextPage
+    hasMore.value       = more
+    totalElements.value = total
     toast.resolve(flashId, 'success', `Loaded ${content.length} more.`)
   } catch (e) {
     const msg = e?.response?.data?.message ?? 'Failed to load more.'
