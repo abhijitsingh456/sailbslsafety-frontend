@@ -221,6 +221,7 @@ import { ref, reactive, computed } from 'vue'
 import ObservationCard from '../components/ObservationCard.vue'
 import ObservationModal from '../components/ObservationModal.vue'
 import MultiSelect from './MultiSelect.vue'
+import * as XLSX from 'xlsx'
 import { searchInspections, downloadReport } from '../services/api.js'
 import { CATEGORIES, DEPARTMENTS, COMPLIANCE_STATUSES } from '../constants/options.js'
 import { useToast } from '../composables/useToasts.js'
@@ -334,16 +335,59 @@ const REPORT_MIME = {
 
 const REPORT_LABEL = { word: 'Word', powerpoint: 'PowerPoint', excel: 'Excel' }
 
+const PYTHONANYWHERE_ENDPOINTS = {
+  word:       'https://sailbslsafety2.pythonanywhere.com/generate-report',
+  powerpoint: 'https://sailbslsafety2.pythonanywhere.com/generate-ppt',
+}
+
 async function onDownload(format, ext) {
+  if (!results.value.length) {
+    toast.show('warning', 'No observations loaded — run a search first.')
+    return
+  }
   reportLoading.value = format
   reportError.value = ''
   const flashId = toast.loading(`Preparing ${REPORT_LABEL[format]} report…`)
   try {
-    const { data } = await downloadReport(format, buildParams(0))
-    const blob = new Blob([data], { type: REPORT_MIME[format] })
-    const url  = URL.createObjectURL(blob)
-    const a    = document.createElement('a')
-    const ts   = new Date().toISOString().slice(0, 10)
+    let blob
+    if (PYTHONANYWHERE_ENDPOINTS[format]) {
+      const res = await fetch(PYTHONANYWHERE_ENDPOINTS[format], {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: results.value }),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error ?? `HTTP ${res.status}`)
+      }
+      blob = await res.blob()
+    } else if (format === 'excel') {
+      const rows = results.value.map(o => ({
+        'Observation ID':        o.observationId ?? o.id ?? '',
+        'Inspection Date':       o.inspectionDate ?? '',
+        'Department':            o.department ?? '',
+        'Sub-Department':        o.subDepartment ?? '',
+        'Location':              o.location ?? '',
+        'Category':              o.category ?? '',
+        'Observation':           o.observation ?? '',
+        'Recommendations':       o.recommendations ?? '',
+        'Compliance Status':     o.complianceStatus ?? '',
+        'Target Date':           o.targetDate ?? '',
+        'Include in Dispatcher': o.toBeIncludedInDispatcher ?? '',
+        'Updated At':            o.updatedAt ?? '',
+      }))
+      const ws = XLSX.utils.json_to_sheet(rows)
+      const wb = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(wb, ws, 'Observations')
+      const buf = XLSX.write(wb, { type: 'array', bookType: 'xlsx' })
+      blob = new Blob([buf], { type: REPORT_MIME['excel'] })
+    } else {
+      const { data } = await downloadReport(format, buildParams(0))
+      blob = new Blob([data], { type: REPORT_MIME[format] })
+    }
+    const url = URL.createObjectURL(blob)
+    const a   = document.createElement('a')
+    const ts  = new Date().toISOString().slice(0, 10)
     a.href = url
     a.download = `bsl-inspection-report-${ts}.${ext}`
     document.body.appendChild(a)
@@ -352,7 +396,7 @@ async function onDownload(format, ext) {
     URL.revokeObjectURL(url)
     toast.resolve(flashId, 'success', `${REPORT_LABEL[format]} report downloaded.`)
   } catch (e) {
-    const msg = e?.response?.data?.message ?? 'Report download failed.'
+    const msg = e?.message ?? e?.response?.data?.message ?? 'Report download failed.'
     reportError.value = msg
     toast.resolve(flashId, 'error', msg)
   } finally {

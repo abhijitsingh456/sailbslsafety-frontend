@@ -11,8 +11,8 @@ const http = axios.create({
 /**
  * Build the multipart body matching the backend controller signature:
  *   @RequestPart("observation")       InspectionObservationRequest req
- *   @RequestPart("inspectionPhotos")  List<MultipartFile> inspectionPhotos
- *   @RequestPart("compliedPhotos")    List<MultipartFile> compliedPhotos
+ *   @RequestPart("inspection_photos")  List<MultipartFile> inspection_photos
+ *   @RequestPart("complied_photos")    List<MultipartFile> complied_photos
  */
 function observationFormData(fields, inspectionPhotos = [], compliedPhotos = []) {
   const fd = new FormData()
@@ -20,8 +20,8 @@ function observationFormData(fields, inspectionPhotos = [], compliedPhotos = [])
     'observation',
     new Blob([JSON.stringify(fields)], { type: 'application/json' })
   )
-  inspectionPhotos.forEach(f => fd.append('inspectionPhotos', f))
-  compliedPhotos.forEach(f   => fd.append('compliedPhotos',   f))
+  inspectionPhotos.forEach(f => fd.append('inspection_photos', f))
+  compliedPhotos.forEach(f   => fd.append('complied_photos',   f))
   return fd
 }
 

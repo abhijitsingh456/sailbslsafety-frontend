@@ -60,7 +60,7 @@
         <div class="photos-area">
           <!-- Inspection photos -->
           <div class="photo-group">
-            <span class="photo-group-label">Insp:</span>
+            <span class="photo-group-label">Inspection Photos:</span>
             <template v-if="inspPhotos.length">
               <a
                 v-for="(url, i) in inspPhotos"
@@ -87,7 +87,7 @@
 
           <!-- Complied photos -->
           <div class="photo-group">
-            <span class="photo-group-label">Compl:</span>
+            <span class="photo-group-label">Complied Photos:</span>
             <template v-if="compPhotos.length">
               <a
                 v-for="(url, i) in compPhotos"

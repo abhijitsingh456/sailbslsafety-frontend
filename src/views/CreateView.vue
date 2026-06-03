@@ -68,14 +68,19 @@
             placeholder="Describe the unsafe act / condition observed…" />
         </div>
 
-        <!-- Row 4: compliance · dispatcher -->
-        <div class="grid-2">
+        <!-- Row 4: compliance · dispatcher · discussed with -->
+        <div class="grid-3">
           <div class="field">
             <label class="field-label" for="status">Compliance Status</label>
             <select id="status" class="field-input" v-model="form.complianceStatus">
               <option value="">Select status</option>
               <option v-for="o in COMPLIANCE_STATUSES" :key="o.value" :value="o.value">{{ o.label }}</option>
             </select>
+          </div>
+          <div class="field">
+            <label class="field-label" for="discussedWith">Discussed With</label>
+            <input id="discussedWith" type="text" class="field-input"
+              v-model="form.discussedWith" placeholder="e.g. Shift In-charge" />
           </div>
           <div class="field">
             <label class="field-label" for="dispatcher">Include in Dispatcher Report <span class="req">*</span></label>
@@ -111,7 +116,7 @@
               </svg>
               Inspection Photos <span class="hint-soft">max 3</span>
             </label>
-            <PhotoUpload ref="inspUploadRef" :max="3" @update:files="inspectionPhotos = $event" />
+            <PhotoUpload ref="inspUploadRef" :max="3" @update:files="inspection_photos = $event" />
           </div>
           <div class="field">
             <label class="field-label">
@@ -128,7 +133,7 @@
             <PhotoUpload ref="compUploadRef" :max="3"
               :disabled="!isComplied"
               disabled-hint="Available when status is Complied"
-              @update:files="compliedPhotos = $event" />
+              @update:files="complied_photos = $event" />
           </div>
         </div>
 
@@ -163,8 +168,8 @@ const today = new Date().toISOString().split('T')[0]
 
 const inspUploadRef    = ref(null)
 const compUploadRef    = ref(null)
-const inspectionPhotos = ref([])
-const compliedPhotos   = ref([])
+const inspection_photos = ref([])
+const complied_photos   = ref([])
 const submitting       = ref(false)
 const errors           = reactive({})
 
@@ -172,7 +177,7 @@ const form = reactive({
   inspectionDate: today,
   category: '', department: '', subDepartment: '', location: '',
   observation: '', complianceStatus: '', targetDate: '',
-  toBeIncludedInDispatcher: 'NO', recommendations: '',
+  toBeIncludedInDispatcher: 'YES', recommendations: '', discussedWith: '',
 })
 
 /* ── Conditional field gating ── */
@@ -187,7 +192,7 @@ watch(isOtherDept, (now) => {
 // When user switches *away* from "COMPLIED", wipe complied photos + previews.
 watch(isComplied, (now) => {
   if (!now) {
-    compliedPhotos.value = []
+    complied_photos.value = []
     compUploadRef.value?.reset()
   }
 })
@@ -211,9 +216,9 @@ async function submit() {
   submitting.value = true
   const flashId = toast.loading('Submitting observation…')
   try {
-    await createInspection({ ...form }, inspectionPhotos.value, compliedPhotos.value)
+    await createInspection({ ...form }, inspection_photos.value, complied_photos.value)
     toast.resolve(flashId, 'success', 'Observation submitted successfully.')
-    resetForm()
+    partialReset()
     window.scrollTo({ top: 0, behavior: 'smooth' })
   } catch (e) {
     const msg = e?.response?.data?.message ?? 'Submission failed. Please try again.'
@@ -223,11 +228,23 @@ async function submit() {
   }
 }
 
+// After submit — keep Inspection Date, Category, Department, Location, Discussed With
+function partialReset() {
+  Object.assign(form, {
+    subDepartment: '', observation: '', complianceStatus: '',
+    targetDate: '', toBeIncludedInDispatcher: 'YES', recommendations: '',
+  })
+  Object.keys(errors).forEach(k => delete errors[k])
+  inspUploadRef.value?.reset()
+  compUploadRef.value?.reset()
+}
+
+// Reset button — full wipe
 function resetForm() {
   Object.assign(form, {
     inspectionDate: today, category: '', department: '', subDepartment: '',
     location: '', observation: '', complianceStatus: '', targetDate: '',
-    toBeIncludedInDispatcher: 'NO', recommendations: '',
+    toBeIncludedInDispatcher: 'YES', recommendations: '', discussedWith: '',
   })
   Object.keys(errors).forEach(k => delete errors[k])
   inspUploadRef.value?.reset()
