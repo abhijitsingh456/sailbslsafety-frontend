@@ -33,55 +33,49 @@
 
       <Transition name="slide-down">
         <div v-if="filtersOpen" class="filters-body">
-          <div class="filters-grid">
-
-            <!-- Row 1 -->
+          <!-- Row 1: multi-selects (3 cols) -->
+          <div class="filters-grid filters-grid--3">
             <div class="filter-field">
               <label class="field-label">Department</label>
               <MultiSelect v-model="filters.department" :options="DEPARTMENTS"
                 placeholder="All departments" />
             </div>
-
             <div class="filter-field">
               <label class="field-label">Category</label>
               <MultiSelect v-model="filters.category" :options="CATEGORIES"
                 placeholder="All categories" />
             </div>
-
             <div class="filter-field">
               <label class="field-label">Compliance Status</label>
               <MultiSelect v-model="filters.complianceStatus" :options="COMPLIANCE_STATUSES"
                 placeholder="All statuses" />
             </div>
-
             <!-- Updated On: commented out until backend implements it
             <div class="filter-field">
               <label class="field-label">Updated On</label>
               <input type="date" class="field-input" v-model="filters.updatedOn" />
             </div>
             -->
+          </div>
 
-            <!-- Row 2 -->
+          <!-- Row 2: date filters (4 cols) -->
+          <div class="filters-grid filters-grid--4">
             <div class="filter-field">
               <label class="field-label">Inspection Date From</label>
               <input type="date" class="field-input" v-model="filters.inspectionStartDate" />
             </div>
-
             <div class="filter-field">
               <label class="field-label">Inspection Date To</label>
               <input type="date" class="field-input" v-model="filters.inspectionEndDate" />
             </div>
-
             <div class="filter-field">
               <label class="field-label">Target Date From</label>
               <input type="date" class="field-input" v-model="filters.targetStartDate" />
             </div>
-
             <div class="filter-field">
               <label class="field-label">Target Date To</label>
               <input type="date" class="field-input" v-model="filters.targetEndDate" />
             </div>
-
           </div>
 
           <div class="filter-actions">
@@ -211,13 +205,29 @@
       <div class="results-header">
         <span class="results-count">
           Showing <strong>{{ results.length }}</strong>
-          {{ totalElements > results.length ? ` of ${totalElements}` : '' }}
-          observation(s)
+          {{ totalElements > results.length ? ` of ${totalElements}` : `of ${totalElements || results.length}` }}
+          observation{{ (totalElements || results.length) === 1 ? '' : 's' }}
         </span>
         <div v-if="loading" class="inline-spinner" />
       </div>
 
       <div class="results-scroll">
+        <!-- Top-right Load More bar inside the scroll box -->
+        <div v-if="hasMore" class="scroll-load-more-bar">
+          <button type="button" class="btn-ghost btn-sm load-more-inline"
+            :disabled="loading" @click="loadMore">
+            <svg v-if="loading" class="spin" width="12" height="12" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="9" stroke="currentColor"
+                stroke-width="2.5" stroke-dasharray="40" stroke-dashoffset="30"/>
+            </svg>
+            <svg v-else width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M12 5v14M5 12l7 7 7-7" stroke="currentColor"
+                stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            {{ loading ? 'Loading…' : `Load More (${totalElements > results.length ? totalElements - results.length + ' remaining' : 'next page'})` }}
+          </button>
+        </div>
+
         <div class="results-list">
           <ObservationCard
             v-for="obs in results"
@@ -226,16 +236,22 @@
             @view="openModal"
           />
         </div>
-      </div>
 
-      <div v-if="hasMore" class="load-more-wrap">
-        <button type="button" class="btn-ghost load-more-btn" :disabled="loading" @click="loadMore">
-          <svg v-if="loading" class="spin" width="13" height="13" viewBox="0 0 24 24" fill="none">
-            <circle cx="12" cy="12" r="9" stroke="currentColor"
-              stroke-width="2.5" stroke-dasharray="40" stroke-dashoffset="30"/>
-          </svg>
-          {{ loading ? 'Loading…' : `Load More (${totalElements > results.length ? totalElements - results.length + ' remaining' : 'next page'})` }}
-        </button>
+        <!-- Bottom Load More (same button, repeated for convenience) -->
+        <div v-if="hasMore" class="scroll-load-more-bar scroll-load-more-bar--bottom">
+          <button type="button" class="btn-ghost btn-sm load-more-inline"
+            :disabled="loading" @click="loadMore">
+            <svg v-if="loading" class="spin" width="12" height="12" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="9" stroke="currentColor"
+                stroke-width="2.5" stroke-dasharray="40" stroke-dashoffset="30"/>
+            </svg>
+            <svg v-else width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M12 5v14M5 12l7 7 7-7" stroke="currentColor"
+                stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            {{ loading ? 'Loading…' : `Load More (${totalElements > results.length ? totalElements - results.length + ' remaining' : 'next page'})` }}
+          </button>
+        </div>
       </div>
     </template>
   </div>
@@ -511,14 +527,15 @@ function onDeleted(id) {
   background: var(--accent); color: #fff; font-size: 10.5px; font-weight: 700;
 }
 
-.filters-body { padding: 0 18px 16px; border-top: 1.5px solid var(--border); }
+.filters-body { padding: 0 18px 16px; border-top: 1.5px solid var(--border); display: flex; flex-direction: column; gap: 12px; }
 
 .filters-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
   gap: 12px;
   padding-top: 14px;
 }
+.filters-grid--3 { grid-template-columns: repeat(3, 1fr); padding-top: 14px; }
+.filters-grid--4 { grid-template-columns: repeat(4, 1fr); padding-top: 0; }
 
 .filter-field { display: flex; flex-direction: column; gap: 5px; }
 
@@ -581,8 +598,20 @@ function onDeleted(id) {
 }
 .results-list { display: flex; flex-direction: column; gap: 9px; }
 
-.load-more-wrap { display: flex; justify-content: center; margin-top: 18px; }
-.load-more-btn { min-width: 240px; justify-content: center; gap: 7px; }
+.scroll-load-more-bar {
+  display: flex;
+  justify-content: flex-end;
+  padding-bottom: 10px;
+}
+.scroll-load-more-bar--bottom {
+  padding-bottom: 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+.load-more-inline {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px;
+}
 
 /* ── Export row ── */
 .export-row {
@@ -709,7 +738,12 @@ function onDeleted(id) {
 @keyframes spin { to { transform: rotate(360deg); } }
 .spin { animation: spin 0.8s linear infinite; }
 
-@media (max-width: 840px) { .filters-grid { grid-template-columns: repeat(3, 1fr); } }
-@media (max-width: 620px) { .filters-grid { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 420px) { .filters-grid { grid-template-columns: 1fr; } }
+@media (max-width: 840px) {
+  .filters-grid--3 { grid-template-columns: repeat(2, 1fr); }
+  .filters-grid--4 { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 500px) {
+  .filters-grid--3,
+  .filters-grid--4 { grid-template-columns: 1fr; }
+}
 </style>
