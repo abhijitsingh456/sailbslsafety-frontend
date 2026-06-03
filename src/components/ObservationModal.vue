@@ -42,7 +42,7 @@
               </span>
             </div>
             <div class="modal-header-right">
-              <!-- Delete button -->
+              <!-- Delete button: commented out until re-enabled
               <button v-if="!editing && !confirmDelete" class="btn-delete" @click="confirmDelete = true"
                 title="Delete observation">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
@@ -52,6 +52,7 @@
                     stroke-width="1.8" stroke-linecap="round"/>
                 </svg>
               </button>
+              -->
 
               <button class="modal-close" @click="close" aria-label="Close">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
@@ -62,7 +63,7 @@
             </div>
           </header>
 
-          <!-- Delete confirmation bar -->
+          <!-- Delete confirmation bar: commented out until re-enabled
           <Transition name="confirm-slide">
             <div v-if="confirmDelete" class="confirm-bar">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -82,6 +83,7 @@
               </div>
             </div>
           </Transition>
+          -->
 
           <!-- Body -->
           <div class="modal-body">

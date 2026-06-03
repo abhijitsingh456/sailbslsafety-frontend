@@ -54,10 +54,12 @@
                 placeholder="All statuses" />
             </div>
 
+            <!-- Updated On: commented out until backend implements it
             <div class="filter-field">
               <label class="field-label">Updated On</label>
               <input type="date" class="field-input" v-model="filters.updatedOn" />
             </div>
+            -->
 
             <!-- Row 2 -->
             <div class="filter-field">
@@ -116,21 +118,48 @@
           <span>Word</span>
         </button>
 
-        <button type="button" class="export-btn export-btn--ppt"
-          :disabled="!!reportLoading" @click="onDownload('powerpoint', 'pptx')"
-          title="Download PowerPoint report">
-          <svg v-if="reportLoading === 'powerpoint'" class="spin" width="16" height="16" viewBox="0 0 24 24" fill="none">
-            <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2.5" stroke-dasharray="40" stroke-dashoffset="30"/>
-          </svg>
-          <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <rect x="3" y="4" width="18" height="13" rx="1.5" stroke="currentColor" stroke-width="1.8"/>
-            <path d="M3 8h18" stroke="currentColor" stroke-width="1.6"/>
-            <path d="M10 21h4M12 17v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-            <path d="M8 13l3-2 2 1.5L17 9" stroke="currentColor" stroke-width="1.6"
-              stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          <span>PowerPoint</span>
-        </button>
+        <!-- PowerPoint with scope picker -->
+        <div class="ppt-wrap" v-click-outside="() => pptPickerOpen = false">
+          <button type="button" class="export-btn export-btn--ppt"
+            :disabled="!!reportLoading" @click="pptPickerOpen = !pptPickerOpen"
+            title="Download PowerPoint report">
+            <svg v-if="reportLoading === 'powerpoint'" class="spin" width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2.5" stroke-dasharray="40" stroke-dashoffset="30"/>
+            </svg>
+            <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <rect x="3" y="4" width="18" height="13" rx="1.5" stroke="currentColor" stroke-width="1.8"/>
+              <path d="M3 8h18" stroke="currentColor" stroke-width="1.6"/>
+              <path d="M10 21h4M12 17v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+              <path d="M8 13l3-2 2 1.5L17 9" stroke="currentColor" stroke-width="1.6"
+                stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span>PowerPoint</span>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" aria-hidden="true"
+              :style="{ transform: pptPickerOpen ? 'rotate(180deg)' : '', transition: 'transform 150ms' }">
+              <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <Transition name="picker-drop">
+            <div v-if="pptPickerOpen" class="ppt-picker">
+              <button class="picker-option" @click="onDownload('powerpoint', 'pptx', 'dispatcher')">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                For Dispatcher Meeting
+                <span class="picker-hint">Only dispatcher-flagged</span>
+              </button>
+              <button class="picker-option" @click="onDownload('powerpoint', 'pptx', 'all')">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/>
+                  <path d="M3 9h18M3 15h18M9 3v18M15 3v18" stroke="currentColor" stroke-width="1.5"/>
+                </svg>
+                All Observations
+                <span class="picker-hint">Every result in this search</span>
+              </button>
+            </div>
+          </Transition>
+        </div>
 
         <button type="button" class="export-btn export-btn--excel"
           :disabled="!!reportLoading" @click="onDownload('excel', 'xlsx')"
@@ -199,13 +228,13 @@
         </div>
       </div>
 
-      <div v-if="results.length < totalElements" class="load-more-wrap">
+      <div v-if="hasMore" class="load-more-wrap">
         <button type="button" class="btn-ghost load-more-btn" :disabled="loading" @click="loadMore">
           <svg v-if="loading" class="spin" width="13" height="13" viewBox="0 0 24 24" fill="none">
             <circle cx="12" cy="12" r="9" stroke="currentColor"
               stroke-width="2.5" stroke-dasharray="40" stroke-dashoffset="30"/>
           </svg>
-          {{ loading ? 'Loading…' : `Load More (${totalElements - results.length} remaining)` }}
+          {{ loading ? 'Loading…' : `Load More (${totalElements > results.length ? totalElements - results.length + ' remaining' : 'next page'})` }}
         </button>
       </div>
     </template>
@@ -228,6 +257,15 @@ import { useToast } from '../composables/useToasts.js'
 
 const toast = useToast()
 
+// Custom directive to close PPT picker on outside click
+const vClickOutside = {
+  mounted(el, binding) {
+    el._clickOutside = (e) => { if (!el.contains(e.target)) binding.value(e) }
+    document.addEventListener('click', el._clickOutside)
+  },
+  unmounted(el) { document.removeEventListener('click', el._clickOutside) },
+}
+
 const PAGE_SIZE = 25
 
 const filtersOpen = ref(true)
@@ -237,7 +275,8 @@ const loading     = ref(false)
 const filters = reactive({
   department: [], category: [], complianceStatus: [],
   inspectionStartDate: '', inspectionEndDate: '',
-  targetStartDate: '', targetEndDate: '', updatedOn: '',
+  targetStartDate: '', targetEndDate: '',
+  // updatedOn: '', // commented out until backend implements it
 })
 
 const activeFilterCount = computed(() => {
@@ -247,7 +286,6 @@ const activeFilterCount = computed(() => {
   if (filters.complianceStatus.length) n++
   if (filters.inspectionStartDate || filters.inspectionEndDate) n++
   if (filters.targetStartDate || filters.targetEndDate)         n++
-  if (filters.updatedOn)               n++
   return n
 })
 
@@ -255,50 +293,67 @@ function clearFilters() {
   Object.assign(filters, {
     department: [], category: [], complianceStatus: [],
     inspectionStartDate: '', inspectionEndDate: '',
-    targetStartDate: '', targetEndDate: '', updatedOn: '',
+    targetStartDate: '', targetEndDate: '',
   })
 }
 
 const results       = ref([])
 const page          = ref(0)
 const totalElements = ref(0)
+const hasMore       = ref(false)   // true when backend signals more pages exist
 
 function buildParams(p = 0) {
   const params = { page: p, size: PAGE_SIZE }
-  if (filters.department.length)       params.department       = filters.department
-  if (filters.category.length)         params.category         = filters.category
-  if (filters.complianceStatus.length) params.complianceStatus = filters.complianceStatus
+  if (filters.department.length)       params.department          = filters.department
+  if (filters.category.length)         params.category            = filters.category
+  if (filters.complianceStatus.length) params.complianceStatus    = filters.complianceStatus
   if (filters.inspectionStartDate)     params.inspectionStartDate = filters.inspectionStartDate
   if (filters.inspectionEndDate)       params.inspectionEndDate   = filters.inspectionEndDate
   if (filters.targetStartDate)         params.targetStartDate     = filters.targetStartDate
   if (filters.targetEndDate)           params.targetEndDate       = filters.targetEndDate
-  if (filters.updatedOn)               params.updatedOn           = filters.updatedOn
   return params
 }
 
+function parsePage(data) {
+  const content = data.content ?? []
+  // Determine if more pages exist using any signal the backend provides:
+  // data.last === false  (Spring Page)
+  // data.totalPages > currentPage + 1
+  // data.totalElements > loaded so far (after appending)
+  // Fallback: a full page means there might be more
+  let more = false
+  if (typeof data.last === 'boolean') {
+    more = !data.last
+  } else if (Number.isFinite(data.totalPages) && Number.isFinite(data.number)) {
+    more = data.number < data.totalPages - 1
+  } else if (Number.isFinite(data.totalElements)) {
+    more = results.value.length + content.length < data.totalElements
+  } else {
+    more = content.length === PAGE_SIZE
+  }
+  return { content, more }
+}
+
 async function doSearch() {
-  loading.value = true; hasSearched.value = true; page.value = 0; results.value = []
+  loading.value = true; hasSearched.value = true; page.value = 0
+  results.value = []; hasMore.value = false
   const flashId = toast.loading('Searching observations…')
   try {
     const { data } = await searchInspections(buildParams(0))
-    const content = data.content ?? []
-    results.value = content
-    // Prefer backend totalElements, but fall back to the page length so the
-    // toast/UI stay correct even if the backend response omits paging meta.
-    totalElements.value = Number.isFinite(data.totalElements)
-      ? data.totalElements
-      : content.length
-    const n = results.value.length
-    const total = totalElements.value
-    if (n === 0) {
+    const { content, more } = parsePage(data)
+    results.value    = content
+    hasMore.value    = more
+    totalElements.value = Number.isFinite(data.totalElements) ? data.totalElements : content.length
+    if (content.length === 0) {
       toast.resolve(flashId, 'info', 'No matching observations.')
     } else {
-      const moreNote = total > n ? ` of ${total}` : ''
+      const total    = totalElements.value
+      const moreNote = total > content.length ? ` of ${total}` : ''
       toast.resolve(flashId, 'success',
-        `Found ${n}${moreNote} observation${total === 1 ? '' : 's'}.`)
+        `Found ${content.length}${moreNote} observation${total === 1 ? '' : 's'}.`)
     }
   } catch (e) {
-    results.value = []; totalElements.value = 0
+    results.value = []; totalElements.value = 0; hasMore.value = false
     const msg = e?.response?.data?.message ?? 'Search failed. Please try again.'
     toast.resolve(flashId, 'error', msg)
   } finally {
@@ -307,15 +362,18 @@ async function doSearch() {
 }
 
 async function loadMore() {
-  loading.value = true; page.value++
+  loading.value = true
+  const nextPage = page.value + 1
   const flashId = toast.loading('Loading more…')
   try {
-    const { data } = await searchInspections(buildParams(page.value))
-    const more = data.content ?? []
-    results.value.push(...more)
-    toast.resolve(flashId, 'success', `Loaded ${more.length} more.`)
+    const { data } = await searchInspections(buildParams(nextPage))
+    const { content, more } = parsePage(data)
+    results.value.push(...content)
+    page.value  = nextPage
+    hasMore.value = more
+    if (Number.isFinite(data.totalElements)) totalElements.value = data.totalElements
+    toast.resolve(flashId, 'success', `Loaded ${content.length} more.`)
   } catch (e) {
-    page.value--
     const msg = e?.response?.data?.message ?? 'Failed to load more.'
     toast.resolve(flashId, 'error', msg)
   } finally {
@@ -326,6 +384,7 @@ async function loadMore() {
 /* ── Report download ── */
 const reportLoading = ref('')   // '' | 'word' | 'powerpoint' | 'excel'
 const reportError   = ref('')
+const pptPickerOpen = ref(false)
 
 const REPORT_MIME = {
   word:       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -340,21 +399,31 @@ const PYTHONANYWHERE_ENDPOINTS = {
   powerpoint: 'https://sailbslsafety2.pythonanywhere.com/generate-ppt',
 }
 
-async function onDownload(format, ext) {
+// scope: 'all' | 'dispatcher' (only used for powerpoint)
+async function onDownload(format, ext, scope = 'all') {
+  pptPickerOpen.value = false
   if (!results.value.length) {
     toast.show('warning', 'No observations loaded — run a search first.')
     return
   }
   reportLoading.value = format
   reportError.value = ''
-  const flashId = toast.loading(`Preparing ${REPORT_LABEL[format]} report…`)
+  const scopeLabel = scope === 'dispatcher' ? ' (Dispatcher)' : ''
+  const flashId = toast.loading(`Preparing ${REPORT_LABEL[format]}${scopeLabel} report…`)
   try {
     let blob
     if (PYTHONANYWHERE_ENDPOINTS[format]) {
+      const payload = scope === 'dispatcher'
+        ? results.value.filter(o => o.toBeIncludedInDispatcher === 'YES')
+        : results.value
+      if (payload.length === 0) {
+        toast.resolve(flashId, 'info', 'No dispatcher-flagged observations in this search.')
+        return
+      }
       const res = await fetch(PYTHONANYWHERE_ENDPOINTS[format], {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: results.value }),
+        body: JSON.stringify({ content: payload }),
       })
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
@@ -389,12 +458,12 @@ async function onDownload(format, ext) {
     const a   = document.createElement('a')
     const ts  = new Date().toISOString().slice(0, 10)
     a.href = url
-    a.download = `bsl-inspection-report-${ts}.${ext}`
+    a.download = `bsl-inspection-report-${ts}${scope === 'dispatcher' ? '-dispatcher' : ''}.${ext}`
     document.body.appendChild(a)
     a.click()
     a.remove()
     URL.revokeObjectURL(url)
-    toast.resolve(flashId, 'success', `${REPORT_LABEL[format]} report downloaded.`)
+    toast.resolve(flashId, 'success', `${REPORT_LABEL[format]}${scopeLabel} report downloaded.`)
   } catch (e) {
     const msg = e?.message ?? e?.response?.data?.message ?? 'Report download failed.'
     reportError.value = msg
@@ -581,6 +650,54 @@ function onDeleted(id) {
 .export-btn--ppt   svg:not(.spin) { color: #c43e1c; }
 .export-btn--excel svg:not(.spin) { color: #107c41; }
 .export-btn:hover svg { color: #fffdf8; }
+
+/* PPT scope picker */
+.ppt-wrap { position: relative; }
+
+.ppt-picker {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 200;
+  background: var(--surface);
+  border: 1.5px solid var(--border-strong);
+  border-radius: var(--r-sm);
+  box-shadow: var(--shadow);
+  min-width: 220px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.picker-option {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 14px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  transition: background 130ms;
+  flex-wrap: wrap;
+}
+.picker-option:hover { background: var(--surface-2); }
+.picker-option + .picker-option { border-top: 1px solid var(--border); }
+.picker-hint {
+  display: block;
+  width: 100%;
+  padding-left: 22px;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text-3);
+  margin-top: -4px;
+}
+
+.picker-drop-enter-active, .picker-drop-leave-active { transition: opacity 130ms, transform 130ms; }
+.picker-drop-enter-from, .picker-drop-leave-to { opacity: 0; transform: translateY(-4px); }
 
 .export-error {
   font-size: 12px;
