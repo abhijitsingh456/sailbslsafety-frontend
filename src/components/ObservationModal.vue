@@ -118,8 +118,8 @@
                       v-model="form.location" placeholder="e.g. Cast House" />
                   </div>
                   <div class="form-field">
-                    <label class="field-label" for="e-status">Compliance Status</label>
-                    <select id="e-status" class="field-input" v-model="form.complianceStatus">
+                    <label class="field-label" for="e-status">Compliance Status <span style="color:var(--red)">*</span></label>
+                    <select id="e-status" class="field-input" v-model="form.complianceStatus" required>
                       <option value="">Select status</option>
                       <option v-for="o in COMPLIANCE_STATUSES" :key="o.value" :value="o.value">{{ o.label }}</option>
                     </select>
@@ -252,6 +252,10 @@ function close() {
 }
 
 async function save() {
+  if (!form.complianceStatus) {
+    saveError.value = 'Compliance Status is required.'
+    return
+  }
   saving.value = true; saveError.value = ''; saveSuccess.value = false
   try {
     const id = props.obs.observationId ?? props.obs.id

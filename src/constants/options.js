@@ -9,6 +9,8 @@ export const CATEGORIES = [
   { value: 'NIGHT INSPECTION',                 label: 'Night Inspection' },
   { value: 'RAIL ROAD CROSSING INSPECTION',    label: 'Rail Road Crossing Inspection' },
   { value: 'SAFETY WALK',                      label: 'Safety Walk' },
+  { value: 'DLSIC',                            label: 'DLSIC' },
+  { value: 'SAC',                              label: 'SAC' },
 ]
 
 export const DEPARTMENTS = [
@@ -38,13 +40,15 @@ export const DEPARTMENTS = [
   { value: 'TBS',             label: 'TBS' },
   { value: 'TRAFFIC',         label: 'Traffic' },
   { value: 'WMD',             label: 'WMD' },
+  { value: 'PROJECTS',        label: 'Projects' },
   { value: 'OTHERS',          label: 'Others' },
 ]
 
 export const COMPLIANCE_STATUSES = [
-  { value: 'COMPLIED',     label: 'Complied' },
-  { value: 'NOT COMPLIED', label: 'Not Complied' },
-  { value: 'GOOD POINT',   label: 'Good Point' },
+  { value: 'COMPLIED',        label: 'Complied' },
+  { value: 'NOT COMPLIED',    label: 'Not Complied' },
+  { value: 'GOOD POINT',      label: 'Good Point' },
+  { value: 'NOT APPLICABLE',  label: 'Not Applicable' },
 ]
 
 export const DISPATCHER_OPTIONS = [
@@ -58,9 +62,10 @@ export function getLabel(options, value) {
 
 export function statusConfig(status) {
   const map = {
-    'COMPLIED':     { label: 'Complied',     color: 'var(--green)', dimBg: 'var(--green-dim)', border: 'var(--green-border)' },
-    'NOT COMPLIED': { label: 'Not Complied', color: 'var(--red)',   dimBg: 'var(--red-dim)',   border: 'var(--red-border)'   },
-    'GOOD POINT':   { label: 'Good Point',   color: 'var(--blue)',  dimBg: 'var(--blue-dim)',  border: 'var(--blue-border)'  },
+    'COMPLIED':       { label: 'Complied',       color: 'var(--green)',  dimBg: 'var(--green-dim)',  border: 'var(--green-border)'  },
+    'NOT COMPLIED':   { label: 'Not Complied',   color: 'var(--red)',    dimBg: 'var(--red-dim)',    border: 'var(--red-border)'    },
+    'GOOD POINT':     { label: 'Good Point',     color: 'var(--blue)',   dimBg: 'var(--blue-dim)',   border: 'var(--blue-border)'   },
+    'NOT APPLICABLE': { label: 'Not Applicable', color: 'var(--text-3)', dimBg: 'rgba(120,120,140,0.08)', border: 'rgba(120,120,140,0.25)' },
   }
   return map[status] ?? { label: status, color: 'var(--text-3)', dimBg: 'rgba(120,120,140,0.08)', border: 'rgba(120,120,140,0.2)' }
 }

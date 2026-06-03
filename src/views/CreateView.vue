@@ -71,11 +71,12 @@
         <!-- Row 4: compliance · dispatcher · discussed with -->
         <div class="grid-3">
           <div class="field">
-            <label class="field-label" for="status">Compliance Status</label>
-            <select id="status" class="field-input" v-model="form.complianceStatus">
+            <label class="field-label" for="status">Compliance Status <span class="req">*</span></label>
+            <select id="status" class="field-input" v-model="form.complianceStatus" required>
               <option value="">Select status</option>
               <option v-for="o in COMPLIANCE_STATUSES" :key="o.value" :value="o.value">{{ o.label }}</option>
             </select>
+            <span v-if="errors.complianceStatus" class="ferr">{{ errors.complianceStatus }}</span>
           </div>
           <div class="field">
             <label class="field-label" for="discussedWith">Discussed With</label>
@@ -202,6 +203,7 @@ function validate() {
   if (!form.inspectionDate)            e.inspectionDate            = 'Required'
   if (!form.category)                  e.category                  = 'Required'
   if (!form.department)                e.department                = 'Required'
+  if (!form.complianceStatus)          e.complianceStatus          = 'Required'
   if (!form.toBeIncludedInDispatcher)  e.toBeIncludedInDispatcher  = 'Required'
   Object.assign(errors, e)
   Object.keys(errors).forEach(k => { if (!e[k]) delete errors[k] })
