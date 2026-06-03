@@ -11,6 +11,7 @@ export const CATEGORIES = [
   { value: 'SAFETY WALK',                      label: 'Safety Walk' },
   { value: 'DLSIC',                            label: 'DLSIC' },
   { value: 'SAC',                              label: 'SAC' },
+  { value: 'LOCOMOTIVE INSPECTION',            label: 'Locomotive Inspection' },
 ]
 
 export const DEPARTMENTS = [
