@@ -204,30 +204,26 @@
     <template v-else>
       <div class="results-header">
         <span class="results-count">
-          Showing <strong>{{ results.length }}</strong>
-          {{ totalElements > results.length ? ` of ${totalElements}` : `of ${totalElements || results.length}` }}
-          observation{{ (totalElements || results.length) === 1 ? '' : 's' }}
+          Showing <strong>{{ results.length }}</strong> of <strong>{{ totalElements }}</strong>
+          observation{{ totalElements === 1 ? '' : 's' }}
         </span>
         <div v-if="loading" class="inline-spinner" />
+        <!-- Load More — top right, outside the scroll box -->
+        <button v-if="hasMore" type="button" class="btn-ghost btn-sm load-more-inline"
+          :disabled="loading" @click="loadMore">
+          <svg v-if="loading" class="spin" width="12" height="12" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="9" stroke="currentColor"
+              stroke-width="2.5" stroke-dasharray="40" stroke-dashoffset="30"/>
+          </svg>
+          <svg v-else width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 5v14M5 12l7 7 7-7" stroke="currentColor"
+              stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          {{ loading ? 'Loading…' : `Load More (${totalElements - results.length} remaining)` }}
+        </button>
       </div>
 
       <div class="results-scroll">
-        <!-- Top-right Load More bar inside the scroll box -->
-        <div v-if="hasMore" class="scroll-load-more-bar">
-          <button type="button" class="btn-ghost btn-sm load-more-inline"
-            :disabled="loading" @click="loadMore">
-            <svg v-if="loading" class="spin" width="12" height="12" viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="12" r="9" stroke="currentColor"
-                stroke-width="2.5" stroke-dasharray="40" stroke-dashoffset="30"/>
-            </svg>
-            <svg v-else width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M12 5v14M5 12l7 7 7-7" stroke="currentColor"
-                stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            {{ loading ? 'Loading…' : `Load More (${totalElements > results.length ? totalElements - results.length + ' remaining' : 'next page'})` }}
-          </button>
-        </div>
-
         <div class="results-list">
           <ObservationCard
             v-for="obs in results"
@@ -236,22 +232,22 @@
             @view="openModal"
           />
         </div>
+      </div>
 
-        <!-- Bottom Load More (same button, repeated for convenience) -->
-        <div v-if="hasMore" class="scroll-load-more-bar scroll-load-more-bar--bottom">
-          <button type="button" class="btn-ghost btn-sm load-more-inline"
-            :disabled="loading" @click="loadMore">
-            <svg v-if="loading" class="spin" width="12" height="12" viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="12" r="9" stroke="currentColor"
-                stroke-width="2.5" stroke-dasharray="40" stroke-dashoffset="30"/>
-            </svg>
-            <svg v-else width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M12 5v14M5 12l7 7 7-7" stroke="currentColor"
-                stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            {{ loading ? 'Loading…' : `Load More (${totalElements > results.length ? totalElements - results.length + ' remaining' : 'next page'})` }}
-          </button>
-        </div>
+      <!-- Load More — bottom right, outside the scroll box -->
+      <div v-if="hasMore" class="load-more-bottom">
+        <button type="button" class="btn-ghost btn-sm load-more-inline"
+          :disabled="loading" @click="loadMore">
+          <svg v-if="loading" class="spin" width="12" height="12" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="9" stroke="currentColor"
+              stroke-width="2.5" stroke-dasharray="40" stroke-dashoffset="30"/>
+          </svg>
+          <svg v-else width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 5v14M5 12l7 7 7-7" stroke="currentColor"
+              stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          {{ loading ? 'Loading…' : `Load More (${totalElements - results.length} remaining)` }}
+        </button>
       </div>
     </template>
   </div>
@@ -570,6 +566,7 @@ function onDeleted(id) {
 /* Results */
 .results-header {
   display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
+  justify-content: space-between;
 }
 .results-count { font-size: 13px; color: var(--text-3); }
 .results-count strong { color: var(--text-2); }
@@ -598,15 +595,10 @@ function onDeleted(id) {
 }
 .results-list { display: flex; flex-direction: column; gap: 9px; }
 
-.scroll-load-more-bar {
+.load-more-bottom {
   display: flex;
   justify-content: flex-end;
-  padding-bottom: 10px;
-}
-.scroll-load-more-bar--bottom {
-  padding-bottom: 0;
-  padding-top: 10px;
-  border-top: 1px solid var(--border);
+  margin-top: 10px;
 }
 .load-more-inline {
   display: inline-flex; align-items: center; gap: 6px;
