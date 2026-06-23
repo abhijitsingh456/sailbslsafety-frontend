@@ -266,8 +266,10 @@ import * as XLSX from 'xlsx'
 import { searchInspections, downloadReport } from '../services/api.js'
 import { CATEGORIES, DEPARTMENTS, COMPLIANCE_STATUSES } from '../constants/options.js'
 import { useToast } from '../composables/useToasts.js'
+import { logger } from '../utils/logger.js'
 
 const toast = useToast()
+const log   = logger('SearchView')
 
 // Custom directive to close PPT picker on outside click
 const vClickOutside = {
@@ -341,12 +343,18 @@ async function doSearch() {
   loading.value = true; hasSearched.value = true; page.value = 0
   results.value = []; hasMore.value = false
   const flashId = toast.loading('Searching observations…')
+  const params  = buildParams(0)
+  log.info('search initiated', { page: 0, filters: params })
+  const t0 = Date.now()
   try {
-    const { data } = await searchInspections(buildParams(0))
+    const { data, status } = await searchInspections(params)
     const { content, more, totalElements: total } = parsePage(data)
     results.value       = content
     hasMore.value       = more
     totalElements.value = total
+    log.http('GET', '/api/v1/inspection/', status, Date.now() - t0, {
+      returned: content.length, totalElements: total, hasMore: more,
+    })
     if (content.length === 0) {
       toast.resolve(flashId, 'info', 'No matching observations.')
     } else {
@@ -356,7 +364,9 @@ async function doSearch() {
     }
   } catch (e) {
     results.value = []; totalElements.value = 0; hasMore.value = false
-    const msg = e?.response?.data?.message ?? 'Search failed. Please try again.'
+    const status = e?.response?.status ?? 0
+    const msg    = e?.response?.data?.message ?? 'Search failed. Please try again.'
+    log.http('GET', '/api/v1/inspection/', status, Date.now() - t0, { message: msg })
     toast.resolve(flashId, 'error', msg)
   } finally {
     loading.value = false
@@ -366,17 +376,25 @@ async function doSearch() {
 async function loadMore() {
   loading.value = true
   const nextPage = page.value + 1
-  const flashId = toast.loading('Loading more…')
+  const flashId  = toast.loading('Loading more…')
+  const t0       = Date.now()
+  log.info('load more', { page: nextPage })
   try {
-    const { data } = await searchInspections(buildParams(nextPage))
+    const { data, status } = await searchInspections(buildParams(nextPage))
     const { content, more, totalElements: total } = parsePage(data)
     results.value.push(...content)
     page.value          = nextPage
     hasMore.value       = more
     totalElements.value = total
+    log.http('GET', '/api/v1/inspection/', status, Date.now() - t0, {
+      page: nextPage, loaded: content.length, totalLoaded: results.value.length,
+      totalElements: total, hasMore: more,
+    })
     toast.resolve(flashId, 'success', `Loaded ${content.length} more.`)
   } catch (e) {
-    const msg = e?.response?.data?.message ?? 'Failed to load more.'
+    const status = e?.response?.status ?? 0
+    const msg    = e?.response?.data?.message ?? 'Failed to load more.'
+    log.http('GET', '/api/v1/inspection/', status, Date.now() - t0, { page: nextPage, message: msg })
     toast.resolve(flashId, 'error', msg)
   } finally {
     loading.value = false
@@ -419,20 +437,27 @@ async function onDownload(format, ext, scope = 'all') {
         ? results.value.filter(o => o.toBeIncludedInDispatcher === 'YES')
         : results.value
       if (payload.length === 0) {
+        log.warn('report skipped — no dispatcher-flagged observations', { format, scope })
         toast.resolve(flashId, 'info', 'No dispatcher-flagged observations in this search.')
         return
       }
-      const res = await fetch(PYTHONANYWHERE_ENDPOINTS[format], {
+      const endpoint = PYTHONANYWHERE_ENDPOINTS[format]
+      log.info('report request', { format, scope, payloadCount: payload.length, endpoint })
+      const t0  = Date.now()
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content: payload }),
       })
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
+        log.http('POST', endpoint, res.status, Date.now() - t0, { error: err.error })
         throw new Error(err.error ?? `HTTP ${res.status}`)
       }
+      log.http('POST', endpoint, res.status, Date.now() - t0, { format, scope, payloadCount: payload.length })
       blob = await res.blob()
     } else if (format === 'excel') {
+      log.info('excel export — generating client-side', { rows: results.value.length })
       const rows = results.value.map(o => ({
         'Observation ID':        o.observationId ?? o.id ?? '',
         'Inspection Date':       o.inspectionDate ?? '',
@@ -456,18 +481,20 @@ async function onDownload(format, ext, scope = 'all') {
       const { data } = await downloadReport(format, buildParams(0))
       blob = new Blob([data], { type: REPORT_MIME[format] })
     }
+    const filename = `bsl-inspection-report-${new Date().toISOString().slice(0, 10)}${scope === 'dispatcher' ? '-dispatcher' : ''}.${ext}`
     const url = URL.createObjectURL(blob)
     const a   = document.createElement('a')
-    const ts  = new Date().toISOString().slice(0, 10)
     a.href = url
-    a.download = `bsl-inspection-report-${ts}${scope === 'dispatcher' ? '-dispatcher' : ''}.${ext}`
+    a.download = filename
     document.body.appendChild(a)
     a.click()
     a.remove()
     URL.revokeObjectURL(url)
+    log.info('report downloaded', { format, scope, filename })
     toast.resolve(flashId, 'success', `${REPORT_LABEL[format]}${scopeLabel} report downloaded.`)
   } catch (e) {
     const msg = e?.message ?? e?.response?.data?.message ?? 'Report download failed.'
+    log.error('report download failed', { format, scope, message: msg })
     reportError.value = msg
     toast.resolve(flashId, 'error', msg)
   } finally {

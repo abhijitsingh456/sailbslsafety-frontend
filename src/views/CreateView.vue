@@ -163,6 +163,9 @@ import PhotoUpload from '../components/PhotoUpload.vue'
 import { createInspection } from '../services/api.js'
 import { CATEGORIES, DEPARTMENTS, COMPLIANCE_STATUSES, DISPATCHER_OPTIONS } from '../constants/options.js'
 import { useToast } from '../composables/useToasts.js'
+import { logger } from '../utils/logger.js'
+
+const log = logger('CreateView')
 
 const toast = useToast()
 const today = new Date().toISOString().split('T')[0]
@@ -217,13 +220,24 @@ async function submit() {
   }
   submitting.value = true
   const flashId = toast.loading('Submitting observation…')
+  log.info('submitting observation', {
+    department: form.department, category: form.category,
+    inspectionDate: form.inspectionDate, complianceStatus: form.complianceStatus,
+    inspectionPhotos: inspection_photos.value.length, compliedPhotos: complied_photos.value.length,
+  })
+  const t0 = Date.now()
   try {
-    await createInspection({ ...form }, inspection_photos.value, complied_photos.value)
+    const res = await createInspection({ ...form }, inspection_photos.value, complied_photos.value)
+    log.http('POST', '/api/v1/inspection/', res.status, Date.now() - t0, {
+      observationId: res.data?.observationId ?? res.data?.id,
+    })
     toast.resolve(flashId, 'success', 'Observation submitted successfully.')
     partialReset()
     window.scrollTo({ top: 0, behavior: 'smooth' })
   } catch (e) {
-    const msg = e?.response?.data?.message ?? 'Submission failed. Please try again.'
+    const status = e?.response?.status ?? 0
+    const msg    = e?.response?.data?.message ?? 'Submission failed. Please try again.'
+    log.http('POST', '/api/v1/inspection/', status, Date.now() - t0, { message: msg })
     toast.resolve(flashId, 'error', msg)
   } finally {
     submitting.value = false

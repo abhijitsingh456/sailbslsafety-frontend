@@ -199,6 +199,9 @@ import {
   statusConfig, getLabel,
   CATEGORIES, DEPARTMENTS, COMPLIANCE_STATUSES, DISPATCHER_OPTIONS,
 } from '../constants/options.js'
+import { logger } from '../utils/logger.js'
+
+const log = logger('ObservationModal')
 
 const props = defineProps({ open: Boolean, obs: { type: Object, default: null } })
 const emit  = defineEmits(['close', 'saved', 'deleted'])
@@ -256,12 +259,21 @@ function close() {
 async function save() {
   if (!form.complianceStatus) {
     saveError.value = 'Compliance Status is required.'
+    log.warn('save blocked — compliance status empty')
     return
   }
   saving.value = true; saveError.value = ''; saveSuccess.value = false
+  const id  = props.obs.observationId ?? props.obs.id
+  const url = `/api/v1/inspection/${id}`
+  log.info('saving observation', {
+    observationId: id, complianceStatus: form.complianceStatus,
+    department: form.department, category: form.category, inspectionDate: form.inspectionDate,
+    newInspPhotos: newInspPhotos.value.length, newCompPhotos: newCompPhotos.value.length,
+  })
+  const t0 = Date.now()
   try {
-    const id = props.obs.observationId ?? props.obs.id
-    const { data } = await updateInspection(id, { ...form }, newInspPhotos.value, newCompPhotos.value)
+    const { data, status } = await updateInspection(id, { ...form }, newInspPhotos.value, newCompPhotos.value)
+    log.http('PUT', url, status, Date.now() - t0, { observationId: data?.observationId ?? data?.id })
     inspUploadRef.value?.reset(); compUploadRef.value?.reset()
     emit('saved', data)
     saveSuccess.value = true
@@ -270,7 +282,10 @@ async function save() {
       emit('close')
     }, 2200)
   } catch (e) {
-    saveError.value = e?.response?.data?.message ?? 'Update failed. Please try again.'
+    const status = e?.response?.status ?? 0
+    const msg    = e?.response?.data?.message ?? 'Update failed. Please try again.'
+    log.http('PUT', url, status, Date.now() - t0, { message: msg })
+    saveError.value = msg
   } finally {
     saving.value = false
   }
@@ -278,12 +293,19 @@ async function save() {
 
 async function doDelete() {
   deleting.value = true
+  const id  = props.obs.observationId ?? props.obs.id
+  const url = `/api/v1/inspection/${id}`
+  log.info('deleting observation', { observationId: id })
+  const t0 = Date.now()
   try {
-    const id = props.obs.observationId ?? props.obs.id
-    await deleteInspection(id)
+    const { status } = await deleteInspection(id)
+    log.http('DELETE', url, status, Date.now() - t0)
     emit('deleted', id)
     emit('close')
   } catch (e) {
+    const status = e?.response?.status ?? 0
+    const msg    = e?.response?.data?.message ?? 'Delete failed.'
+    log.http('DELETE', url, status, Date.now() - t0, { message: msg })
     confirmDelete.value = false
   } finally {
     deleting.value = false
