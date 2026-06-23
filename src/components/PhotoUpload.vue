@@ -53,6 +53,14 @@
         </button>
       </div>
     </div>
+
+    <p v-if="sizeError" class="size-error">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink:0">
+        <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/>
+        <path d="M12 8v4M12 16h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+      </svg>
+      {{ sizeError }}
+    </p>
   </div>
 </template>
 
@@ -66,13 +74,29 @@ const props = defineProps({
 })
 const emit  = defineEmits(['update:files'])
 
-const dragging = ref(false)
-const files    = ref([])
+const MAX_BYTES = 8 * 1024 * 1024   // 8 MB
+
+const dragging  = ref(false)
+const files     = ref([])
+const sizeError = ref('')
 
 function addFiles(rawFiles) {
-  const toAdd = Array.from(rawFiles).slice(0, props.max - files.value.length)
-  toAdd.forEach(f => files.value.push({ file: f, preview: URL.createObjectURL(f) }))
-  emit('update:files', files.value.map(f => f.file))
+  sizeError.value = ''
+
+  const candidates = Array.from(rawFiles).slice(0, props.max - files.value.length)
+
+  const oversized = candidates.filter(f => f.size > MAX_BYTES)
+  const accepted  = candidates.filter(f => f.size <= MAX_BYTES)
+
+  if (oversized.length) {
+    const names = oversized.map(f => `${f.name} (${(f.size / 1024 / 1024).toFixed(1)} MB)`).join(', ')
+    sizeError.value = oversized.length === 1
+      ? `Photo exceeds 8 MB limit and was not added: ${names}`
+      : `${oversized.length} photos exceed the 8 MB limit and were not added: ${names}`
+  }
+
+  accepted.forEach(f => files.value.push({ file: f, preview: URL.createObjectURL(f) }))
+  if (accepted.length) emit('update:files', files.value.map(f => f.file))
 }
 
 function onFileChange(e) { addFiles(e.target.files); e.target.value = '' }
@@ -81,12 +105,14 @@ function onDrop(e)       { dragging.value = false; addFiles(e.dataTransfer.files
 function remove(i) {
   URL.revokeObjectURL(files.value[i].preview)
   files.value.splice(i, 1)
+  sizeError.value = ''
   emit('update:files', files.value.map(f => f.file))
 }
 
 function reset() {
   files.value.forEach(f => URL.revokeObjectURL(f.preview))
-  files.value = []
+  files.value  = []
+  sizeError.value = ''
   emit('update:files', [])
 }
 
@@ -94,7 +120,7 @@ defineExpose({ reset })
 </script>
 
 <style scoped>
-.photo-upload { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.photo-upload { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; width: 100%; }
 
 .hidden-input { display: none; }
 
@@ -183,5 +209,16 @@ defineExpose({ reset })
   background: var(--red-dim);
   color: var(--red);
   border-color: var(--red-border);
+}
+
+.size-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  margin: 4px 0 0;
+  width: 100%;
+  font-size: 11.5px;
+  color: var(--red);
+  line-height: 1.4;
 }
 </style>
